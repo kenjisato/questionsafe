@@ -1,0 +1,11 @@
+# Answer { #questionsafe.Answer }
+
+```python
+Answer()
+```
+
+User-facing coercion interface for building answers.
+
+Example
+- Answer.from_text("Paris", fraction=100)
+- Answer.from_num(3.14, tolerance=0.01)

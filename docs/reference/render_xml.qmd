@@ -1,0 +1,6 @@
+# render_xml { #questionsafe.render_xml }
+
+```python
+render_xml(obj, *, templates_dir=None)
+```
+

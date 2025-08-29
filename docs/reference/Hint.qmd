@@ -1,0 +1,13 @@
+# Hint { #questionsafe.Hint }
+
+```python
+Hint(
+    text,
+    format='html',
+    options=dict(),
+    shownumcorrect=False,
+    clearwrong=False,
+)
+```
+
+<hint> ... </hint> with optional flags.

@@ -1,0 +1,17 @@
+<div class="q">
+  <h3>{{ n.name | e }}</h3>
+  <div class="stem">{{ n.stem_html | safe }}</div>
+  {% set groupname = (n.idnumber or (n.name | slug)) %}
+  <ul class="choices" data-numbering="none">
+    <li>
+      <label>
+        <input type="radio" name="{{ groupname }}" value="true"> True
+      </label>
+    </li>
+    <li>
+      <label>
+        <input type="radio" name="{{ groupname }}" value="false"> False
+      </label>
+    </li>
+  </ul>
+</div>

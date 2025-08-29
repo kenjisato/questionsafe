@@ -1,0 +1,7 @@
+# Feedback { #questionsafe.Feedback }
+
+```python
+Feedback(text, format='html', options=dict())
+```
+
+<feedback> ... </feedback>

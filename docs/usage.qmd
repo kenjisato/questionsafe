@@ -1,0 +1,389 @@
+---
+title: "Usage"
+page-layout: article
+---
+
+```{python}
+#| include: false
+
+def embed_example(q: "Quiz", title: str | None = None, height_offset: int = 50) -> None:
+    html = q.to_html(title=title).replace('"', '&quot;')
+    print(f"""<iframe srcdoc="{html}" onload='javascript:(function(o){{var _height=o.contentWindow.document.body.scrollHeight+{height_offset};o.style.height=_height+"px";}}(this));' style='overflow: hidden;'></iframe>""")
+```
+
+## Examples by question types
+
+The most typical usecase requires top-level `Q` to define a question and `Quiz` to define a set of questions.
+
+```{python}
+from questionsafe import Q, Quiz
+```
+
+### True or False Question
+
+```{python}
+#| echo: true
+#| output: false
+
+tfq = (
+    Q.TrueFalse(
+        name="Logic/DeMorgan",
+        questiontext="True or False: Not(A and B) == (Not A) or (Not B)"
+    )
+    .set_correct_if_true()
+)
+quiz = Quiz([tfq])  # Pass list of questions to the Quiz constructor
+quiz.to_html()      # Or quiz.to_xml() 
+```
+
+```{python}
+#| echo: false
+#| output: asis
+embed_example(quiz)
+```
+
+### Single Choice Question
+
+From here, I will omit boilerplate code. 
+
+You can set the `questiontext` attribute with more expressive `ask` method. 
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.SingleChoice("SC")
+     .ask("Pick one")
+     .set_choice_correct("A")      # one correct choice
+     .set_choices_wrong("B", "C")  # multiple wrong choices
+)
+```
+
+Note:
+- SingleChoice.add_choice_correct is guarded to prevent adding multiple correct choices via the colorful API. If you need advanced control, use add_answer or set_answers. Validation still requires exactly one correct (fraction=100).
+
+```{python}
+#| echo: false
+#| output: asis
+embed_example(Quiz([_]))
+```
+
+### Multiple Choice Question
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.MultiChoice(name="MC")
+     .ask("Pick all that apply")
+     .set_choices_correct("A", "B")  # single/multiple correct choices
+     .set_choices_wrong("C", "D")    # multiple wrong choices
+     .set_numbering("123")           # abc, ABC, 123, iii, III or none
+)
+```
+
+```{python}
+#| echo: false
+#| output: asis
+embed_example(Quiz([_]))
+```
+
+
+### Short Answer Question
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.ShortAnswer("SA")
+     .ask("Spell 'colour'")
+     .add_answer("colour", fraction=100)
+)
+```
+
+```{python}
+#| echo: false
+#| output: asis
+embed_example(Quiz([_]))
+```
+
+
+### Numerical Question
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.Numerical("NU")
+     .ask("2+2?")
+     .add_answer(4)
+)
+```
+
+```{python}
+#| echo: false
+#| output: asis
+embed_example(Quiz([_]))
+```
+
+### Numerical Question (with units)
+
+You can now add answers with units concisely. Global unit options are set once per question.
+
+```{python}
+#| echo: true
+#| output: true
+from questionsafe import Unit
+
+(
+    Q.Numerical("Weight")
+     .ask("100g + 1kg = ?")
+     .add_answer_unit(1100, "g")   # base unit and base answer
+     .add_answer_unit(1.1, "kg")   # infer kg multiplier as 1000
+     # .set_unit_options(showunits=1, unitgradingtype=2, unitpenalty=0.2)  # optional; defaults are these values
+)
+```
+
+```{python}
+#| echo: false
+#| output: asis
+embed_example(Quiz([_]))
+```
+
+If you prefer to specify units explicitly, `.add_units()` and `.set_units()` accept sensible defaults:
+
+```{python}
+#| echo: true
+#| output: false
+from questionsafe import Unit
+(
+    Q.Numerical("Speed")
+     .ask("Give speed in m/s; km/h allowed")
+     .add_answer(3.14)
+     .add_units(
+         Unit("m/s", 1.0, 100),
+         Unit("km/h", 0.2777778, 50),
+         # All options are optional now; below are the defaults
+         showunits=1, unitgradingtype=2, unitpenalty=0.2, unitsleft=False
+     )
+)
+```
+
+
+### Cloze Question
+
+<!-- Placeholder for future cloze example -->
+
+### Essay Question
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.Essay("E")
+     .ask("<p>Introduce yourself.</p>")
+)
+```
+
+### Description
+
+Description (in Moodle) is a type of question that provides students with some information. 
+So, Description type has `name`, `questiontext` and some other metadatas only. 
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.Description("Desc/Week1")
+     .set_questiontext("<p>This section covers basic topics.</p>")
+)
+```
+
+
+
+### Category
+
+Category (in Moodle) is a meta question that provides the Moodle server with the information about 
+how to group the questions that follows. 
+
+```{python}
+#| echo: true
+#| output: false
+(
+    Q.Category("$course$/Exam/Final")
+)
+```
+
+## Full Example
+
+This guide covers common tasks: constructing questions, grouping them into a quiz, and rendering.
+
+```{python}
+#| echo: false
+#| results: true
+from questionsafe import Q, Quiz, Hint, Text, Unit, Answer
+from IPython.display import HTML, display
+
+quiz = Quiz(category="Exam/Week1", subcategory_id="123")
+mcq1 = (
+    Q.MultiChoice(
+        name="Capital/Thailand",
+        questiontext="What is the capital of Thailand?"
+    )
+    .set_choices_correct("Bangkok", feedback="Right!")
+    .set_choices_wrong("Chiang Mai", "Phuket", "Pattaya")
+    .set_hints(
+        Hint("Consider the most populous city.", shownumcorrect=True),
+        Hint("Eliminate coastal resort options.", clearwrong=True),
+        penalty=0.25
+    )
+)
+quiz.add(mcq1)
+quiz.title = "Combined Preview"
+embed_example(quiz)
+```
+
+### Quickstart: add_answer patterns
+
+```{python}
+#| echo: true
+#| results: true
+from questionsafe import Q, Text
+# MultiChoice and SingleChoice
+mc = (
+    Q.MultiChoice(name="Capitals", questiontext=Text("<p>Pick one</p>"))
+    .add_answer("Tokyo", fraction=100)
+    .add_answer("Osaka", fraction=0)
+)
+sc = Q.SingleChoice(name="SC", questiontext=Text("<p>Pick one</p>")).add_answer("A", fraction=100)
+mc, sc
+```
+
+```{python}
+#| echo: true
+#| results: true
+# ShortAnswer
+from questionsafe import Q, Text
+sa = Q.ShortAnswer(name="SA", questiontext=Text("<p>Spell colour</p>")).add_answer("colour", fraction=100)
+sa
+```
+
+```{python}
+#| echo: true
+#| results: true
+# Numerical
+from questionsafe import Q, Text
+nu = Q.Numerical(name="NU", questiontext=Text("<p>2+2?</p>")).add_answer(4)
+nu2 = Q.Numerical(name="Pi", questiontext=Text("<p>π (two decimals)?</p>")).add_answer(3.14, tolerance=0.005)
+nu, nu2
+```
+
+### Advanced: set_answers all at once
+
+When replacing the whole list in one call, construct concrete answers via the Answer interface.
+
+```{python}
+#| echo: true
+#| results: true
+from questionsafe import Answer
+from questionsafe import Q, Text
+mc = Q.MultiChoice(name="MC", questiontext=Text("<p>Pick two</p>"))
+mc.set_answers(
+    Answer.Text("A", fraction=50),
+    Answer.Text("B", fraction=50),
+    Answer.Text("C", fraction=0),
+)
+mc
+```
+
+### Question text formats
+
+MoodleQuiz accepts several convenient forms for questiontext. Strings are treated as HTML by default.
+
+```{python}
+#| echo: true
+# Minimal (string, default html)
+from questionsafe import Q
+Q.SingleChoice(name="SC", questiontext="What is the capital of Thailand?")
+```
+
+```{python}
+#| echo: true
+# Explicit Text with default format (html)
+from questionsafe import Q, Text
+Q.Essay(name="E", questiontext=Text("Introduce yourself."))
+```
+
+```{python}
+#| echo: true
+# Explicit Text with a non-default format (e.g., markdown)
+from questionsafe import Q, Text
+Q.MultiChoice(
+    name="MC-md",
+    questiontext=Text("Pick EU capitals:\n\n- Paris\n- Berlin\n- Madrid", format="markdown")
+)
+```
+
+Note: Moodle often wraps content in paragraph tags automatically; for simple sentences, you can omit surrounding <p>…</p>.
+
+### Recommendation: exporting quizzes
+
+- For typical use (exporting a quiz set), prefer the bound methods on Quiz:
+  - quiz.to_xml("out.xml") or quiz.to_html("out.html")
+- The top-level functions questionsafe.render_* and questionsafe.write_* are mainly for exporting ad-hoc lists of questions without constructing a Quiz instance (e.g., quick drafts or debugging).
+
+### SingleChoice vs MultiChoice
+
+```{python}
+#| echo: true
+from questionsafe import Q, Text, Answer
+# Single-choice: exactly one correct
+sc = (
+    Q.SingleChoice(name="SC/Capital", questiontext="Capital?")
+    .set_choice_correct("Bangkok")
+    .set_choices_wrong("Chiang Mai", "Phuket")
+)
+# Multi-choice: allow multiple correct answers (fractions sum to 100)
+mc = Q.MultiChoice(name="MC/EU", questiontext=Text("<p>Pick EU capitals</p>"))
+mc.set_answers(
+    Answer.from_text("Paris", fraction=50),
+    Answer.from_text("Berlin", fraction=50),
+    Answer.from_text("Zurich", fraction=0),
+)
+sc, mc
+```
+
+### Categories
+
+```{python}
+#| echo: true
+from questionsafe.quiz import Quiz
+from questionsafe import Q
+quiz = Quiz(category="Course/Week1")
+# Inherits parent category: rendered as $course$/Course/Week1/Intro
+quiz.add_category("Intro")
+# Absolute category path (no inheritance): rendered as $course$/Intro-Absolute
+quiz.add_category("Intro-Absolute", inherit=False)
+quiz
+```
+
+Note: the writer normalizes category paths by prefixing the first segment with $course$/ unless the first segment is an explicit token like $course$ (i.e., matches ^\$.+\$$).
+
+### Grouping with QuestionGroup
+
+You can explicitly group variants using QuestionGroup. This is equivalent to passing a list, but allows attaching metadata and reusing groups.
+
+```{python}
+#| echo: true
+from questionsafe.base import QuestionGroup
+from questionsafe import Q, Text
+from questionsafe.quiz import Quiz
+# Build two variants of the same logical question
+v1 = Q.TrueFalse(name="Logic/DM/1", questiontext=Text("...")).set_correct_if_true()
+v2 = Q.TrueFalse(name="Logic/DM/2", questiontext=Text("...")).set_correct_if_true()
+# Wrap them in a group and add to the quiz
+quiz = Quiz(category="Course/Week1")
+quiz.add_group(QuestionGroup([v1, v2]), idnumber_prefix="dm-", idnumber_offset=0)
+quiz
+```
+

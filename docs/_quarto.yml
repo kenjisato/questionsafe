@@ -1,0 +1,46 @@
+project:
+  type: website
+  title: "MoodleQuiz"
+  output-dir: ../_site
+  preview:
+    port: 4200
+    browser: true
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-copy: true
+    grid:
+      body-width: 900px
+    css: styles.css
+
+execute:
+  kernel: questionsafe-uv
+  echo: true
+  warning: false
+  error: false
+
+website:
+  repo-url: https://github.com/kenjisato/questionsafe
+  repo-actions: [edit, issue]
+  navbar:
+    left:
+      - text: Home
+        file: index.qmd
+      - text: Usage
+        file: usage.qmd
+      - text: Fluent API
+        file: fluent-api.qmd
+      - text: API Reference
+        file: api/index.qmd
+      - text: Changelog
+        file: CHANGELOG.md
+
+quartodoc:
+  package: questionsafe
+  style: pkgdown
+
+metadata-files:
+  - _quartodoc.yml
+

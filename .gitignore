@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Quarto output
+_site/
+
+# Quarto docs-generated API pages (under docs/)
+docs/api/**
+!docs/api/index.qmd
+
+# OS and editor artifacts
+.DS_Store
+
+# Quarto execution artifacts
+*.quarto_ipynb
+.ipynb_checkpoints
+
+# Virtual environments
+.venv
+
+/.quarto/
+
+/.luarc.json

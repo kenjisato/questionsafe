@@ -1,0 +1,29 @@
+{% import "_macros.xml.j2" as mx %}
+<question type="essay">
+  {{ mx.name_and_stem(n) }}
+  {{ mx.defaultgrade_penalty(n) }}
+
+  <responseformat>{{ n.responseformat }}</responseformat>
+  <responserequired>{{ 1 if n.responserequired else 0 }}</responserequired>
+  <responsefieldlines>{{ n.responsefieldlines }}</responsefieldlines>
+  {%- if n.minwordlimit and n.minwordlimit > 0 %}
+  <minwordlimit>{{ n.minwordlimit }}</minwordlimit>
+  {%- endif %}
+  {%- if n.maxwordlimit and n.maxwordlimit > 0 %}
+  <maxwordlimit>{{ n.maxwordlimit }}</maxwordlimit>
+  {%- endif %}
+  <attachments>{{ n.attachments }}</attachments>
+  <attachmentsrequired>{{ 1 if n.attachmentsrequired else 0 }}</attachmentsrequired>
+  {%- if n.maxbytes and n.maxbytes > 0 %}
+  <maxbytes>{{ n.maxbytes }}</maxbytes>
+  {%- endif %}
+  {%- if n.filetypeslist %}
+  <filetypeslist>{{ n.filetypeslist }}</filetypeslist>
+  {%- endif %}
+  {%- if n.responsetemplate_text %}
+  <responsetemplate format="{{ n.responsetemplate_format | default('html') }}"><text>{{ n.responsetemplate_text | cdata }}</text></responsetemplate>
+  {%- endif %}
+  {%- if n.graderinfo_text %}<graderinfo format="{{ n.graderinfo_format | default('html') }}"><text>{{ n.graderinfo_text | cdata }}</text></graderinfo>{%- endif %}
+  <answer fraction="0"><text></text></answer>
+  {{- mx.tags_and_id(n) }}
+</question>

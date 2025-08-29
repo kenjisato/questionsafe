@@ -1,0 +1,103 @@
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial,
+    sans-serif;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+.q {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+.q h3 {
+  margin: 0.2rem 0 1rem 0;
+}
+.q .stem {
+  margin: 0.5rem 0 1rem 0;
+}
+.choices li {
+  margin: 0.25rem 0;
+}
+.lbl {
+  display: inline-block;
+  min-width: 2em;
+}
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.4rem;
+  background: #eee;
+  margin-left: 0.5rem;
+}
+.ans {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+}
+.ans summary {
+  cursor: pointer;
+}
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+  margin: 1.2rem 0;
+}
+.category {
+  font-weight: 600;
+}
+
+/* base */
+.choices {
+  margin: 0 0 1rem 1.25rem;
+}
+
+/* schemes via list-style-type */
+.choices[data-numbering="abc"] {
+  list-style-type: lower-alpha;
+}
+.choices[data-numbering="ABCD"] {
+  list-style-type: upper-alpha;
+}
+.choices[data-numbering="123"] {
+  list-style-type: decimal;
+}
+.choices[data-numbering="iii"] {
+  list-style-type: lower-roman;
+}
+.choices[data-numbering="III"] {
+  list-style-type: upper-roman;
+}
+.choices[data-numbering="none"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+/* ensure a trailing dot regardless of UA style (modern browsers) */
+.choices[data-numbering="abc"] > li::marker {
+  content: counter(list-item, lower-alpha) ". ";
+}
+.choices[data-numbering="ABCD"] > li::marker {
+  content: counter(list-item, upper-alpha) ". ";
+}
+.choices[data-numbering="123"] > li::marker {
+  content: counter(list-item) ". ";
+}
+.choices[data-numbering="iii"] > li::marker {
+  content: counter(list-item, lower-roman) ". ";
+}
+.choices[data-numbering="III"] > li::marker {
+  content: counter(list-item, upper-roman) ". ";
+}
+
+@media print {
+  body {
+    max-width: none;
+  }
+  .ans {
+    display: none;
+  } /* hide answers when printing */
+}

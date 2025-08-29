@@ -1,0 +1,17 @@
+/* Normalize content width across pages, including embedded HTML outputs */
+#quarto-content .content {
+  max-width: 900px;
+}
+
+/* Ensure code-output blocks don't push beyond the content width */
+.quarto-figure, .cell, .cell-output-display, .cell-output, .cell-output>pre, .cell-output-display>div {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Prevent any embedded elements from resetting container width */
+.cell-output-display [style*="max-width"],
+.cell-output-display [style*="width:"] {
+  max-width: 100% !important;
+}
+

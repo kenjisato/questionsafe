@@ -1,0 +1,36 @@
+<div class="q">
+  <h3>{{ n.name }} <span class="badge">essay</span></h3>
+  <div class="stem">{{ n.stem_html | safe }}</div>
+
+  <div class="settings">
+    <div><em>Response format:</em> {{ n.responseformat }}</div>
+    <div><em>Input required:</em> {{ 'yes' if n.responserequired else 'no' }}</div>
+    <div><em>Lines:</em> {{ n.responsefieldlines }}</div>
+    {% if n.minwordlimit and n.minwordlimit > 0 %}
+    <div><em>Min words:</em> {{ n.minwordlimit }}</div>
+    {% endif %}
+    {% if n.maxwordlimit and n.maxwordlimit > 0 %}
+    <div><em>Max words:</em> {{ n.maxwordlimit }}</div>
+    {% endif %}
+    <div><em>Attachments:</em> {{ n.attachments }}</div>
+    <div><em>Attachments required:</em> {{ 'yes' if n.attachmentsrequired else 'no' }}</div>
+    {% if n.maxbytes and n.maxbytes > 0 %}
+    <div><em>Max bytes:</em> {{ n.maxbytes }}</div>
+    {% endif %}
+    {% if n.filetypeslist %}
+    <div><em>File types:</em> {{ n.filetypeslist }}</div>
+    {% endif %}
+  </div>
+
+  {% if n.responsetemplate_text %}
+  <details class="ans"><summary>Response template</summary>
+    <div>{{ n.responsetemplate_text | safe }}</div>
+  </details>
+  {% endif %}
+
+  {% if n.graderinfo_html %}
+  <details class="ans"><summary>Grading info</summary>
+    <div>{{ n.graderinfo_html | safe }}</div>
+  </details>
+  {% endif %}
+</div>

@@ -1,0 +1,31 @@
+build:
+  directory: api
+  sidebar: sections
+  sections:
+    - title: Facades
+      contents:
+        - questionsafe
+        - questionsafe.questions
+        - questionsafe.answers
+    - title: Core (internal models)
+      contents:
+        - questionsafe.base._question
+        - questionsafe.base._answer
+        - questionsafe.base._text
+        - questionsafe.base._mixins
+        - questionsafe.base._units
+    - title: Question types
+      contents:
+        - questionsafe.questions.multichoice
+        - questionsafe.questions.truefalse
+        - questionsafe.questions.shortanswer
+        - questionsafe.questions.numerical
+        - questionsafe.questions.essay
+        - questionsafe.questions.description
+    - title: Writer
+      contents:
+        - questionsafe.writer
+    - title: Quiz
+      contents:
+        - questionsafe.quiz._quiz
+

@@ -1,0 +1,6 @@
+# write_html { #questionsafe.write_html }
+
+```python
+write_html(obj, path, *, title=None, templates_dir=None)
+```
+

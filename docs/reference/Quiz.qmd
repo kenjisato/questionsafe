@@ -1,0 +1,134 @@
+# Quiz { #questionsafe.Quiz }
+
+```python
+Quiz(
+    questions=list(),
+    title=None,
+    category=None,
+    subcategory_id='123',
+    lms='moodle',
+    _counter=0,
+    _total_qn=0,
+)
+```
+
+A container of category and question objects with optional grouping.
+
+Attributes
+- questions: List[Question]
+    Ordered list of question-like objects (Category or Question) to include.
+- title: Optional[str]
+    Optional title used for HTML preview if not provided explicitly.
+- category: Optional[str]
+    Parent category path used when adding grouped question variants.
+- subcategory_id: Literal["123", "name"]
+    Strategy to name subcategories for groups ("123" or "name").
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [add](#questionsafe.Quiz.add) | Append question-like objects and return self for chaining. |
+| [add_category](#questionsafe.Quiz.add_category) | Append a Category node, optionally inheriting this quiz's parent category. |
+| [add_group](#questionsafe.Quiz.add_group) | Append a group of question variants under a subcategory and assign idnumbers. |
+| [info](#questionsafe.Quiz.info) | Print a simple textual summary of this quiz. |
+| [to_html](#questionsafe.Quiz.to_html) | Render or write this quiz to an HTML preview document. |
+| [to_xml](#questionsafe.Quiz.to_xml) | Render or write this quiz to Moodle XML (or other LMS when available). |
+| [validate](#questionsafe.Quiz.validate) | Validate all questions by calling each item's validate() if available. |
+
+### add { #questionsafe.Quiz.add }
+
+```python
+Quiz.add(*items)
+```
+
+Append question-like objects and return self for chaining.
+
+### add_category { #questionsafe.Quiz.add_category }
+
+```python
+Quiz.add_category(path, *, inherit=True)
+```
+
+Append a Category node, optionally inheriting this quiz's parent category.
+
+Parameters
+- path: str
+    Sub-path or absolute path depending on `inherit`.
+- inherit: bool
+    If True (default) and self.category is set, prefix with "{self.category}/".
+    If False, use `path` as-is.
+
+Notes
+- Writer normalization prefixes the first segment with "$course$/" unless the
+  first segment is already a token like "$course$".
+- Adding a Category does not affect the question count returned by ``len(quiz)``.
+
+### add_group { #questionsafe.Quiz.add_group }
+
+```python
+Quiz.add_group(questions, *, idnumber_prefix=None, idnumber_offset=0)
+```
+
+Append a group of question variants under a subcategory and assign idnumbers.
+
+Parameters
+- questions: Iterable[Question] | QuestionGroup
+    Variants of a logical question; Category nodes are not allowed.
+- idnumber_prefix: Optional[str]
+    Prefix applied to assigned idnumbers (e.g., "v" -> v0, v1, ...).
+- idnumber_offset: int
+    Starting index for idnumber assignment within this group.
+
+Behavior
+- Inserts a Category node for this group. Parent category is self.category
+  if set; otherwise, today's date (YYYY-MM-DD) is used.
+- Subcategory name is "Qn" sequence if subcategory_id=="123"; otherwise
+  it uses the first question's name when subcategory_id=="name".
+- For each question lacking an idnumber, assign prefix + (offset+i).
+
+### info { #questionsafe.Quiz.info }
+
+```python
+Quiz.info()
+```
+
+Print a simple textual summary of this quiz.
+
+Output format
+- First line: total number of non-category questions (i.e., ``len(self)``)
+- Subsequent lines: each item in order
+  * Category: ``---- {path} ----``
+  * Question: uses the question's ``__str__`` summary
+
+### to_html { #questionsafe.Quiz.to_html }
+
+```python
+Quiz.to_html(file=None, *, title=None, templates_dir=None)
+```
+
+Render or write this quiz to an HTML preview document.
+
+- If file is None, returns HTML str (uses render_html).
+- If file is provided, writes to the path and returns Path (uses write_html).
+- Title defaults to quiz.title when not provided.
+
+### to_xml { #questionsafe.Quiz.to_xml }
+
+```python
+Quiz.to_xml(file=None, *, templates_dir=None)
+```
+
+Render or write this quiz to Moodle XML (or other LMS when available).
+
+- If file is None, returns bytes of XML (uses render_xml).
+- If file is provided, writes to the path and returns Path (uses write_xml).
+
+### validate { #questionsafe.Quiz.validate }
+
+```python
+Quiz.validate()
+```
+
+Validate all questions by calling each item's validate() if available.
+Raises ValueError at the first failure encountered.

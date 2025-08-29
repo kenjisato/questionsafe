@@ -1,0 +1,21 @@
+{
+    "typeCheckingMode": "strict",
+    "include": ["src"],
+    "exclude": ["examples", "tests", "**/build", "**/.venv", "**/.pytest_cache", "**/.mypy_cache"],
+
+    // Keep Optional access strict
+    "reportOptionalMemberAccess": "error",
+    "reportOptionalSubscript": "error",
+    "reportOptionalCall": "error",
+
+    // Downgrade unknown-type noise while we migrate annotations
+    "reportUnknownParameterType": "warning",
+    "reportUnknownArgumentType": "warning",
+    "reportUnknownVariableType": "warning",
+    "reportUnknownMemberType": "warning",
+    "reportMissingTypeArgument": "warning",
+
+    // Reduce noise from private usage and redundant isinstance checks
+    "reportPrivateUsage": "warning",
+    "reportUnnecessaryIsInstance": "none"
+}

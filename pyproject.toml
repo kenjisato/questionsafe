@@ -1,0 +1,47 @@
+[project]
+name = "questionsafe"
+version = "0.1.0"
+description = "Build quiz questions in Python and export to Moodle XML (not affiliated with Moodle)."
+readme = "README.md"
+authors = [
+    { name = "Kenji Sato", email = "mail@kenjisato.jp" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "css-inline>=0.17.0",
+    "jinja2>=3.1.6",
+    "lxml>=6.0.0",
+    "pydantic>=2.11.7",
+    "typer>=0.16.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/kenjisato/questionsafe"
+Repository = "https://github.com/kenjisato/questionsafe"
+Documentation = "https://kenjisato.github.io/questionsafe"
+Issues = "https://github.com/kenjisato/questionsafe/issues"
+
+[project.scripts]
+questionsafe = "questionsafe.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "lxml-stubs>=0.5.1",
+    "pytest>=8.4.1",
+    "ruff>=0.12.8",
+    "quartodoc>=0.9.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.29.0",
+    "pyright>=1.1.404",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/questionsafe"]
+include = ["src/questionsafe/templates/*.j2"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/questionsafe/templates/*.j2"]

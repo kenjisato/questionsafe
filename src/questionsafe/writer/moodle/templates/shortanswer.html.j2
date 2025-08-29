@@ -1,0 +1,28 @@
+<div class="q">
+  <h3>{{ n.name }}</h3>
+  <div class="stem">{{ n.stem_html | safe }}</div>
+
+  <div class="settings">
+    <em>Case sensitive:</em> {{ "Yes" if n.usecase == 1 else "No" }}
+  </div>
+
+  <details class="ans"><summary>Show answers</summary>
+    <ul>
+      {% for a in n.answers %}
+        <li>
+          {{ a.text }}
+          {% if a.fraction != 100 %}<span class="badge">{{ a.fraction }}%</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+
+  {% if n.tags %}
+    <div class="tags"><em>Tags:</em> {{ n.tags | join(", ") }}</div>
+  {% endif %}
+  {% if n.hints %}
+    <details class="ans"><summary>Hints</summary>
+      {% for h in n.hints %}<div>{{ h | safe }}</div>{% endfor %}
+    </details>
+  {% endif %}
+</div>

@@ -1,0 +1,15 @@
+# Text { #questionsafe.Text }
+
+```python
+Text(text, format='html', options=dict())
+```
+
+Rich text value with an explicit format and optional options.
+
+Attributes
+- text: str
+    The content (typically HTML).
+- format: str
+    One of 'html', 'moodle_auto_format', 'plain_text', 'markdown' (default 'html').
+- options: Mapping[str, Any]
+    Additional options specific to the usage site (e.g., hint flags).

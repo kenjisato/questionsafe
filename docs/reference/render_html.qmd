@@ -1,0 +1,6 @@
+# render_html { #questionsafe.render_html }
+
+```python
+render_html(obj, *, title=None, templates_dir=None)
+```
+

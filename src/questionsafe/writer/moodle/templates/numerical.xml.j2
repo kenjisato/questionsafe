@@ -1,0 +1,34 @@
+{% import "_macros.xml.j2" as mx %}
+<question type="numerical">
+  {{ mx.name_and_stem(n) }}
+  {{ mx.defaultgrade_penalty(n) }}
+  {{ mx.answer_value_block(n.answers) }}
+  {%- if n.units %}
+  <units>
+  {%- for u in n.units %}
+    <unit>
+      <multiplier>{{ u.multiplier }}</multiplier>
+      <unit_name>{{ u.unit | e }}</unit_name>
+      {%- if u.fraction is not none %}
+      <fraction>{{ u.fraction }}</fraction>
+      {%- endif %}
+    </unit>
+  {%- endfor %}
+  </units>
+  {%- endif %}
+  {# numerical options #}
+  {%- if n.unitgradingtype is defined %}
+  <unitgradingtype>{{ n.unitgradingtype }}</unitgradingtype>
+  {%- endif %}
+  {%- if n.showunits is defined %}
+  <showunits>{{ n.showunits }}</showunits>
+  {%- endif %}
+  {%- if n.unitsleft is defined %}
+  <unitsleft>{{ 1 if n.unitsleft else 0 }}</unitsleft>
+  {%- endif %}
+  {%- if n.unitpenalty is defined %}
+  <unitpenalty>{{ n.unitpenalty }}</unitpenalty>
+  {%- endif %}
+  {{- mx.hints_block(n) -}}
+  {{- mx.tags_and_id(n) }}
+</question>

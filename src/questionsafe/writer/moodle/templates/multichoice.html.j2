@@ -1,0 +1,23 @@
+<div class="q">
+  <h3>{{ n.name | e }}</h3>
+  <div class="stem">{{ n.stem_html | safe }}</div>
+{% set input_type = 'radio' if n.single else 'checkbox' %}
+  {% set groupname = (n.idnumber or (n.name | slug)) %}
+  <ul class="choices" data-numbering="{{ n.answernumbering }}">
+  {% for a in n.answers %}
+    <li>
+      <label>
+        <input type="{{ input_type }}" name="{{ groupname }}">
+        {{ a.text | e }}
+      </label>
+    </li>
+  {% endfor %}
+  </ul>
+  {% if n.feedback_correct_text or n.feedback_partially_text or n.feedback_incorrect_text %}
+  <details class="ans"><summary>Answer feedback</summary>
+    {% if n.feedback_correct_text %}<div><strong>Correct:</strong> {{ n.feedback_correct_text | safe }}</div>{% endif %}
+    {% if n.feedback_partially_text %}<div><strong>Partially correct:</strong> {{ n.feedback_partially_text | safe }}</div>{% endif %}
+    {% if n.feedback_incorrect_text %}<div><strong>Incorrect:</strong> {{ n.feedback_incorrect_text | safe }}</div>{% endif %}
+  </details>
+  {% endif %}
+</div>

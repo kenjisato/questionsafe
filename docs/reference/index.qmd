@@ -1,0 +1,19 @@
+# Function reference {.doc .doc-index}
+
+## questionsafe
+
+
+
+| | |
+| --- | --- |
+| [Quiz](Quiz.qmd#questionsafe.Quiz) | A container of category and question objects with optional grouping. |
+| [Hint](Hint.qmd#questionsafe.Hint) | <hint> ... </hint> with optional flags. |
+| [Feedback](Feedback.qmd#questionsafe.Feedback) | <feedback> ... </feedback> |
+| [Unit](Unit.qmd#questionsafe.Unit) | A measurement unit definition for numerical questions. |
+| [Text](Text.qmd#questionsafe.Text) | Rich text value with an explicit format and optional options. |
+| [Answer](Answer.qmd#questionsafe.Answer) | User-facing coercion interface for building answers. |
+| [Q](Q.qmd#questionsafe.Q) |  |
+| [render_xml](render_xml.qmd#questionsafe.render_xml) |  |
+| [render_html](render_html.qmd#questionsafe.render_html) |  |
+| [write_xml](write_xml.qmd#questionsafe.write_xml) |  |
+| [write_html](write_html.qmd#questionsafe.write_html) |  |

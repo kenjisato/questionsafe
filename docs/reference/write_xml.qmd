@@ -1,0 +1,6 @@
+# write_xml { #questionsafe.write_xml }
+
+```python
+write_xml(obj, path, *, templates_dir=None)
+```
+

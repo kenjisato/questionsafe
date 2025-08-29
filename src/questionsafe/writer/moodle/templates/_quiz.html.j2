@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if title %}{{ title | e}}{% else %}Preview{% endif %}</title>
+    <style>
+      {%- filter indent(width=6) %}
+      {% include "style.css.j2" %}
+      {%- endfilter %}
+    </style>
+  </head>
+  <body>
+    {% if title %}<h1>{{ title | e}}</h1>{% endif %}
+    {%- filter indent(width=4) %}
+    {{ body_html | safe }}
+    {%- endfilter %}
+
+    {%- filter indent(width=4) %}
+    {% include "_mathjax.html.j2" %}
+    {%- endfilter %}
+  </body>
+</html>

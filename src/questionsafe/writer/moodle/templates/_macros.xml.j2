@@ -1,0 +1,91 @@
+{# Common Jinja macros for Moodle XML templates #}
+
+{% macro name_and_stem(n) -%}
+  <name><text>{{ n.name | e }}</text></name>
+  <questiontext format="{{ n.stem_format | default('html') }}">
+    <text>{{ n.stem_text | cdata }}</text>
+  </questiontext>
+{%- endmacro %}
+
+{% macro defaultgrade_penalty(n) -%}
+  <defaultgrade>{{ n.defaultgrade }}</defaultgrade>
+  {%- if n.penalty is defined %}
+  <penalty>{{ n.penalty }}</penalty>
+  {%- endif %}
+{%- endmacro %}
+
+{% macro feedback_block(text, fmt) -%}
+  {%- if text %}
+    <feedback format="{{ fmt | default('html') }}">
+      <text>{{ text | cdata }}</text>
+    </feedback>
+  {%- endif -%}
+{%- endmacro %}
+
+{# Answers with plain text content (multichoice/shortanswer) #}
+{% macro answer_text_block(answers) -%}
+  {% for a in answers %}
+  <answer fraction="{{ a.fraction }}"{% if a.answer_format is defined and a.answer_format %} format="{{ a.answer_format }}"{% endif %}>
+    <text>{{ a.text | e }}</text>
+    {{- feedback_block(a.feedback_text, a.feedback_format) }}
+  </answer>
+  {%- endfor %}
+{%- endmacro %}
+
+{# Answers with numeric value (numerical) #}
+{% macro answer_value_block(answers) -%}
+  {% for a in answers %}
+  <answer fraction="{{ a.fraction }}"{% if a.answer_format is defined and a.answer_format %} format="{{ a.answer_format }}"{% endif %}>
+    <text>{{- a.value -}}</text>
+    {%- if a.tolerance is not none %}
+    <tolerance>{{- a.tolerance -}}</tolerance>
+    {%- endif %}
+    {{- feedback_block(a.feedback_text, a.feedback_format) }}
+  </answer>
+  {%- endfor %}
+{%- endmacro %}
+
+{%- macro combined_block(n) %}
+  {%- if n.has_combined_feedback %}
+    {%- if n.feedback_correct_text %}
+    <correctfeedback format="{{ n.feedback_correct_format | default('html') }}">
+      <text>{{ n.feedback_correct_text | cdata }}</text>
+    </correctfeedback>
+    {%- endif %}
+    {%- if n.feedback_partially_text %}
+    <partiallycorrectfeedback format="{{ n.feedback_partially_format | default('html') }}">
+      <text>{{ n.feedback_partially_text | cdata }}</text>
+    </partiallycorrectfeedback>
+    {%- endif %}
+    {%- if n.feedback_incorrect_text %}
+    <incorrectfeedback format="{{ n.feedback_incorrect_format | default('html') }}">
+      <text>{{ n.feedback_incorrect_text | cdata }}</text>
+    </incorrectfeedback>
+    {%- endif %}
+  {%- endif %}
+{%- endmacro %}
+
+{%- macro hints_block(n) %}
+  {%- if n.has_hints %}
+    {%- if n.hints %}
+      {%- for h in n.hints %}
+        <hint format="{{ h.format | default('html') }}">
+          <text>{{ h.text | cdata }}</text>
+          {%- if h.shownumcorrect %}<shownumcorrect/>{%- endif %}
+          {%- if h.clearwrong %}<clearwrong/>{%- endif %}
+        </hint>
+      {%- endfor %}
+    {%- endif %}
+  {%- endif %}
+{%- endmacro %}
+
+{%- macro tags_and_id(n) %}
+  {%- if n.tags %}
+  <tags>
+  {%- for t in n.tags %}
+    <tag><text>{{ t | e }}</text></tag>
+  {%- endfor %}
+  </tags>
+  {%- endif %}
+  <idnumber>{{ n.idnumber | default('') }}</idnumber>
+{%- endmacro %}
