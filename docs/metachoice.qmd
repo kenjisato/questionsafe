@@ -82,6 +82,26 @@ group = mc.generate_multichoice(n=2, limit=1, seed=1)
 
 Answers are always listed in the registered pool order for stability.
 
+## Using a prototype question for defaults
+
+You can pass a prototype MultiChoice or SingleChoice to control defaults like shuffle, labels, combined feedback, etc. The generator deep-copies the prototype per variant and replaces only name, question text, and answers.
+
+```{python}
+#| echo: true
+from questionsafe.meta import MetaChoice, Stem, Choice, Constraint
+from questionsafe.questions.multichoice import MultiChoice
+
+proto = MultiChoice(name="TEMPLATE").set_choice_layout(labels="abc", shuffle=False)
+mc = (
+    MetaChoice()
+    .set_choices([Choice("A","Alpha"), Choice("B","Bravo"), Choice("C","Charlie")])
+)
+mc.add_stem(Stem("S_PROTO", "Pick B").set_choices_correct({"B"}))
+# Each generated MCQ inherits labels/shuffle from the prototype
+grp = mc.generate_multichoice(n=2, limit=1, seed=7, prototype=proto)
+(grp.variants[0].labels, grp.variants[0].shuffle)
+```
+
 ## Design notes
 
 - Choice keys decouple identifiers from long texts, allowing stable grouping and constraints.

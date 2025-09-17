@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Mapping, Any, Union
+from copy import deepcopy
 
 from ..base._choice_sampling import Constraint as BaseConstraint, constrained_subsets
 from ..base._choice import Choice
@@ -263,15 +264,23 @@ class MetaChoice:
             raise ValueError("No feasible subset satisfying constraints; adjust group bounds or n")
         return out
 
-    def _build_multichoice(self, stem: Stem, subset: Sequence[Choice], correct_members: Set[Choice]) -> MultiChoice:
+    def _build_multichoice(
+        self,
+        stem: Stem,
+        subset: Sequence[Choice],
+        correct_members: Set[Choice],
+        prototype: Optional[MultiChoice] = None,
+    ) -> MultiChoice:
         correct = [c for c in subset if c in correct_members]
         wrong = [c for c in subset if c not in correct_members]
         k = len(correct)
         if k <= 0:
             raise RuntimeError("Invariant violated: subset must include at least one correct")
         per = 100.0 / k
-        q = MultiChoice(name=stem.key)
+        q = deepcopy(prototype) if prototype is not None else MultiChoice(name=stem.key)
+        q.name = stem.key
         q.set_questiontext(stem.text)
+        q.answers = []
         for c in correct:
             q.add_answer(Answer.from_text(c.text, fraction=per))
         for c in wrong:
@@ -279,13 +288,21 @@ class MetaChoice:
         q.validate()
         return q
 
-    def _build_singlechoice(self, stem: Stem, subset: Sequence[Choice], correct_members: Set[Choice]) -> SingleChoice:
+    def _build_singlechoice(
+        self,
+        stem: Stem,
+        subset: Sequence[Choice],
+        correct_members: Set[Choice],
+        prototype: Optional[SingleChoice] = None,
+    ) -> SingleChoice:
         correct = [c for c in subset if c in correct_members]
         if len(correct) != 1:
             raise RuntimeError("Internal error: expected exactly one correct after constraint adjustment")
         chosen = correct[0]
-        q = SingleChoice(name=stem.key)
+        q = deepcopy(prototype) if prototype is not None else SingleChoice(name=stem.key)
+        q.name = stem.key
         q.set_questiontext(stem.text)
+        q.answers = []
         q.add_answer(Answer.from_text(chosen.text, fraction=100.0))
         for c in (x for x in subset if x is not chosen):
             q.add_answer(Answer.from_text(c.text, fraction=0.0))
@@ -302,6 +319,7 @@ class MetaChoice:
         randomize_branch: bool,
         correct_bounds: Optional[tuple[int, int]],
         builder,
+        prototype: Optional[Union[MultiChoice, SingleChoice]] = None,
     ) -> QuestionGroup:
         if not self._choices:
             raise ValueError("Choice pool is empty; call set_choices()/add_choice() first")
@@ -324,7 +342,7 @@ class MetaChoice:
                 randomize_branch=randomize_branch,
             )
             for subset in subsets:
-                out.append(builder(stem, subset, correct_members))
+                out.append(builder(stem, subset, correct_members, prototype))
         return QuestionGroup(variants=out)
 
     def generate_multichoice(
@@ -336,6 +354,7 @@ class MetaChoice:
         randomize_order: bool = True,
         randomize_branch: bool = True,
         nc: Optional[int | tuple[int, int]] = None,
+        prototype: Optional[MultiChoice] = None,
     ) -> QuestionGroup:
         """Generate MultiChoice questions for each stem and return a QuestionGroup.
 
@@ -350,6 +369,8 @@ class MetaChoice:
               If an int, exactly that many corrects.
               If a (min,max) tuple, range of allowed corrects, inclusive.
               If None, use the bounds from the defined "__correct__" group.
+        - prototype: an optional MultiChoice with desired defaults (e.g., shuffle, labels,
+              combined feedback). It is deep-copied per variant; answers are replaced.
         """
         bounds: Optional[tuple[int, int]]
         if nc is None:
@@ -371,6 +392,7 @@ class MetaChoice:
             randomize_branch=randomize_branch,
             correct_bounds=bounds,
             builder=self._build_multichoice,
+            prototype=prototype,
         )
 
     def generate_singlechoice(
@@ -381,6 +403,7 @@ class MetaChoice:
         seed: Optional[int] = None,
         randomize_order: bool = True,
         randomize_branch: bool = True,
+        prototype: Optional[SingleChoice] = None,
     ) -> QuestionGroup:
         """Generate SingleChoice questions for each stem and return a QuestionGroup.
 
@@ -396,4 +419,5 @@ class MetaChoice:
             randomize_branch=randomize_branch,
             correct_bounds=(1, 1),
             builder=self._build_singlechoice,
+            prototype=prototype,
         )

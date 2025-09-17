@@ -38,7 +38,11 @@ def main() -> None:
     )
     mc.add_stem(stem2)
 
-    group = mc.generate_multichoice(n=3, limit=2, seed=42, )
+# Use a prototype to set defaults like labels/shuffle
+from questionsafe.questions.multichoice import MultiChoice as _MC
+proto = _MC(name="TEMPLATE").set_choice_layout(labels="abc", shuffle=False)
+
+group = mc.generate_multichoice(n=3, limit=2, seed=42, prototype=proto)
 
     # Use with Quiz.add_group
     from questionsafe.quiz import Quiz
