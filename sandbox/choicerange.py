@@ -5,10 +5,13 @@ import random
 @dataclass(frozen=True)
 class Choice:
     text: str
-    def __key(self): return self.text
-    def __hash__(self): return hash(self.__key())
+    def __key(self):
+        return self.text
+    def __hash__(self):
+        return hash(self.__key())
     def __eq__(self, other):
-        if not isinstance(other, Choice): return NotImplemented
+        if not isinstance(other, Choice):
+            return NotImplemented
         return self.__key() == other.__key__()
 
 @dataclass(frozen=True)
@@ -20,9 +23,11 @@ class ChoiceGroup:
     def __key(self):
         members = tuple(sorted(self.members, key=lambda x: x.text))
         return (self.id, members, self.bounds)
-    def __hash__(self): return hash(self.__key())
+    def __hash__(self):
+        return hash(self.__key())
     def __eq__(self, other):
-        if not isinstance(other, ChoiceGroup): return NotImplemented
+        if not isinstance(other, ChoiceGroup):
+            return NotImplemented
         return self.__key() == other.__key__()
 
 @dataclass
@@ -94,13 +99,13 @@ class ChoiceGenerator:
                     count[g] -= 1
 
         def violates_upper() -> bool:
-            for g, (L, U) in bounds.items():
+            for g, (_L, U) in bounds.items():
                 if count[g] > U:
                     return True
             return False
 
         def lower_reachable(i: int) -> bool:
-            for g, (L, U) in bounds.items():
+            for g, (L, _U) in bounds.items():
                 if count[g] + suf[g][i] < L:
                     return False
             return True

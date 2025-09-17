@@ -5,53 +5,16 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Mapping, Any, Union
 
 from ..base._choice_sampling import Constraint as BaseConstraint, constrained_subsets
+from ..base._choice import Choice
 from ..questions.multichoice import MultiChoice
 from ..questions.singlechoice import SingleChoice
-from ..base._answer import Answer, TextAnswer
-from ..base._constraints import ALLOWED_FRACTIONS_POS
+from ..base._answer import Answer
 from ..base._group import QuestionGroup
 
 
-def _allowed_uniform_counts() -> Set[int]:
-    # Allowed counts n such that 100/n is exactly one of ALLOWED_FRACTIONS_POS
-    out: Set[int] = set()
-    for f in ALLOWED_FRACTIONS_POS:
-        if f <= 0:
-            continue
-        n = round(100.0 / f)
-        if abs(100.0 / n - f) <= 1e-6:
-            out.add(int(n))
-    return out
+CORRECT_GROUP_ID = "__correct__"
 
-
-ALLOWED_UNIFORM_COUNTS = _allowed_uniform_counts()
-
-
-def _coerce_text(val: TextAnswer | str) -> str:
-    """Coerce TextAnswer|str to normalized non-empty text (HTML assumed)."""
-    if isinstance(val, str):
-        t = val.strip()
-    else:
-        t = Answer.from_text(val).text.strip()
-    if not t:
-        raise ValueError("Choice text cannot be empty")
-    return t
-
-
-@dataclass
-class Choice:
-    key: str
-    text: str
-
-
-@dataclass(frozen=True)
-class Constraint:
-    id: str
-    members: frozenset[str]
-    min: int = 0
-    max: Optional[int] = None
-    description: Optional[str] = None
-
+class Constraint(BaseConstraint):
     def __init__(
         self,
         id: str,
@@ -63,21 +26,11 @@ class Constraint:
     ) -> None:
         ks: Set[str] = set()
         for c in choices:
-            if isinstance(c, Choice):
-                k = c.key.strip()
-            else:
-                k = str(c).strip()
+            k = (c.key if isinstance(c, Choice) else str(c)).strip()
             if not k:
                 raise ValueError("Constraint choices must have non-empty keys")
             ks.add(k)
-        object.__setattr__(self, "id", str(id))
-        object.__setattr__(self, "members", frozenset(ks))
-        object.__setattr__(self, "min", int(min))
-        object.__setattr__(self, "max", None if max is None else int(max))
-        object.__setattr__(self, "description", description)
-
-    def to_base_constraint(self) -> BaseConstraint:
-        return BaseConstraint(id=self.id, members=self.members, min=self.min, max=self.max, description=self.description)
+        super().__init__(id=str(id), members=frozenset(ks), min=int(min), max=None if max is None else int(max), description=description)
 
 
 def _coerce_to_choice_list(obj: Any) -> List[Choice]:
@@ -91,23 +44,10 @@ def _coerce_to_choice_list(obj: Any) -> List[Choice]:
     """
     # Single item cases
     if isinstance(obj, Choice):
-        k = obj.key.strip()
-        if not k:
-            raise ValueError("Choice key must be a non-empty string")
-        if not obj.text.strip():
-            raise ValueError("Choice text cannot be empty")
+        # Already validated and normalized by Choice.__post_init__
         return [obj]
     if isinstance(obj, Mapping):
-        out: List[Choice] = []
-        for k_in, t_in in obj.items():
-            k = str(k_in).strip()
-            t = str(t_in)
-            if not k:
-                raise ValueError("Choice key must be a non-empty string")
-            if not t.strip():
-                raise ValueError("Choice text cannot be empty")
-            out.append(Choice(k, t))
-        return out
+        return [Choice(str(k).strip(), str(v)) for k, v in obj.items()]
     if isinstance(obj, str):
         raw = obj.strip()
         if ":" in raw:
@@ -117,51 +57,45 @@ def _coerce_to_choice_list(obj: Any) -> List[Choice]:
         else:
             k = raw
             t = raw
-        if not k:
-            raise ValueError("Choice key must be a non-empty string")
-        if not t.strip():
-            raise ValueError("Choice text cannot be empty")
         return [Choice(k, t)]
 
     # Iterable case (but avoid treating string/mapping as iterable here)
     try:
         it = iter(obj)  # type: ignore
-    except TypeError:
-        raise TypeError("Unsupported choice input type")
+    except TypeError as err:
+        raise TypeError("Unsupported choice input type") from err
     out: List[Choice] = []
     for item in it:  # type: ignore
         out.extend(_coerce_to_choice_list(item))
     return out
 
 
-@dataclass
+@dataclass(slots=True)
 class Stem:
     key: str
     text: str
     local_groups: Sequence[BaseConstraint] = field(default_factory=tuple)
 
+    def __post_init__(self) -> None:
+        if not str(self.key).strip():
+            raise ValueError("Stem.key must be a non-empty string")
+        if not str(self.text).strip():
+            raise ValueError("Stem.text must be a non-empty string")
+
     def set_choices_correct(self, items: Iterable[Union[str, Choice]]) -> "Stem":
-        ms: Set[str] = set()
-        for it in items:
-            if isinstance(it, Choice):
-                k = it.key.strip()
-            else:
-                k = str(it).strip()
-            if k:
-                ms.add(k)
-        correct = BaseConstraint(id="__correct__", members=ms, min=1, max=None, description=None)
-        lgs = [g for g in self.local_groups if g.id != "__correct__"]
-        lgs.append(correct)
-        self.local_groups = tuple(lgs)
+        ms: Set[str] = {
+            (it.key.strip() if isinstance(it, Choice) else str(it).strip())
+            for it in items
+            if (isinstance(it, Choice) and it.key.strip()) or (not isinstance(it, Choice) and str(it).strip())
+        }
+        correct = BaseConstraint(id=CORRECT_GROUP_ID, members=ms, min=1, max=None, description=None)
+        self.local_groups = tuple(g for g in self.local_groups if g.id != CORRECT_GROUP_ID) + (correct,)
         return self
 
-    def add_constraint(self, constraint: Constraint) -> "Stem":
-        if constraint.id == "__correct__":
+    def add_constraint(self, constraint: BaseConstraint) -> "Stem":
+        if constraint.id == CORRECT_GROUP_ID:
             raise ValueError("'__correct__' is reserved; use set_choices_correct() instead")
-        gs = constraint.to_base_constraint()
-        lgs = list(self.local_groups)
-        lgs.append(gs)
-        self.local_groups = tuple(lgs)
+        self.local_groups = tuple(self.local_groups) + (constraint,)
         return self
 
 
@@ -205,11 +139,7 @@ class MetaChoice:
         return self
 
     def _add_choice_internal(self, ch: Choice) -> None:
-        k = ch.key.strip()
-        if not k:
-            raise ValueError("Choice key must be a non-empty string")
-        if not ch.text.strip():
-            raise ValueError("Choice text cannot be empty")
+        k = ch.key  # already normalized by Choice.__post_init__
         if k in self._choices:
             raise ValueError(f"Duplicate choice key: {k}")
         self._choices[k] = ch
@@ -233,15 +163,17 @@ class MetaChoice:
         return self
 
     # Global constraints
-    def add_constraint(self, constraint: Constraint) -> "MetaChoice":
-        if constraint.id == "__correct__":
+    def add_constraint(self, constraint: BaseConstraint) -> "MetaChoice":
+        if constraint.id == CORRECT_GROUP_ID:
             raise ValueError("'__correct__' is reserved; use Stem.set_choices_correct() instead")
-        ks = set(constraint.members)
-        pool_set = set(self._choices.keys())
-        if not ks.issubset(pool_set):
-            missing = sorted(ks - pool_set)
-            raise ValueError(f"Global constraint '{constraint.id}' has members not in pool: {missing}")
-        self._global_groups[constraint.id] = constraint.to_base_constraint()
+        missing: List[str] = []
+        for m in constraint.members:
+            key = m.key if isinstance(m, Choice) else str(m).strip()
+            if key not in self._choices:
+                missing.append(key)
+        if missing:
+            raise ValueError(f"Global constraint '{constraint.id}' has members not in pool: {sorted(missing)}")
+        self._global_groups[constraint.id] = constraint
         return self
 
     # Stem creation
@@ -249,34 +181,73 @@ class MetaChoice:
         """Register a stem. Returns the same stem for fluent chaining."""
         if not isinstance(stem, Stem):
             raise TypeError("add_stem expects a Stem instance")
-        k = str(stem.key).strip()
-        if not k:
-            raise ValueError("Stem.key must be a non-empty string")
+        # Stem.__post_init__ validates key/text
         self._stems.append(stem)
         return stem
 
     def _constraints_for_stem(self, stem: Stem) -> List[BaseConstraint]:
-        # Conjoin global + local by passing both; same-id groups are not merged but both enforced.
         groups: List[BaseConstraint] = list(self._global_groups.values()) + list(stem.local_groups)
-        # Validate that all group members are known keys
-        pool_set = set(self._choices.keys())
+        return self._materialize_constraints(groups)
+
+    def _materialize_constraints(self, groups: Sequence[BaseConstraint]) -> List[BaseConstraint]:
+        out: List[BaseConstraint] = []
         for g in groups:
-            diff = set(g.members) - pool_set
-            if diff:
-                raise ValueError(f"Group {g.id} has members not in pool: {sorted(diff)}")
-        return groups
+            members: Set[Choice] = set()
+            for m in g.members:
+                if isinstance(m, Choice):
+                    members.add(m)
+                else:
+                    key = str(m).strip()
+                    ch = self._choices.get(key)
+                    if ch is None:
+                        raise ValueError(f"Group {g.id} has member not in pool: {key}")
+                    members.add(ch)
+            out.append(BaseConstraint(id=g.id, members=frozenset(members), min=g.min, max=g.max, description=g.description))
+        return out
+
+    def _adjust_constraints_for_correct(
+        self,
+        raw_groups: Sequence[BaseConstraint],
+        *,
+        override_minmax: Optional[tuple[int, int]] | None,
+    ) -> tuple[list[BaseConstraint], set[Choice]]:
+        """Return adjusted constraints and the set of correct members.
+
+        If override_minmax is provided, the correct group's min/max are overridden.
+        When overriding to (1,1), enforce generate_singlechoice's invariant that the
+        original correct group must not demand more than one correct (min<=1).
+        """
+        adjusted: List[BaseConstraint] = []
+        correct_members: Set[Choice] = set()
+        saw_correct = False
+        for g in raw_groups:
+            if g.id == CORRECT_GROUP_ID:
+                saw_correct = True
+                correct_members.update(g.members)
+                if override_minmax is None:
+                    adjusted.append(g)
+                else:
+                    if override_minmax == (1, 1) and g.min > 1:
+                        raise ValueError("generate_singlechoice requires correct-group min<=1")
+                    m0, m1 = override_minmax
+                    adjusted.append(BaseConstraint(id=g.id, members=g.members, min=m0, max=m1, description=g.description))
+            else:
+                adjusted.append(g)
+        if not saw_correct:
+            raise ValueError("No correct group defined for stem; call set_choices_correct")
+        return adjusted, correct_members
 
     def _pick_subsets(
         self,
         *,
-        pool: Sequence[str],
+        pool: Sequence[Choice],
         groups: Sequence[BaseConstraint],
         n: int,
         seed: Optional[int],
         limit: int,
         randomize_order: bool,
         randomize_branch: bool,
-    ) -> List[List[str]]:
+    ) -> List[List[Choice]]:
         it = constrained_subsets(
             pool,
             groups,
@@ -287,12 +258,74 @@ class MetaChoice:
             randomize_branch=randomize_branch,
         )
         pos = {p: i for i, p in enumerate(pool)}
-        out: List[List[str]] = []
-        for s in it:
-            out.append(sorted(s, key=lambda x: pos[x]))
+        out = [sorted(s, key=pos.get) for s in it]
         if not out:
             raise ValueError("No feasible subset satisfying constraints; adjust group bounds or n")
         return out
+
+    def _build_multichoice(self, stem: Stem, subset: Sequence[Choice], correct_members: Set[Choice]) -> MultiChoice:
+        correct = [c for c in subset if c in correct_members]
+        wrong = [c for c in subset if c not in correct_members]
+        k = len(correct)
+        if k <= 0:
+            raise RuntimeError("Invariant violated: subset must include at least one correct")
+        per = 100.0 / k
+        q = MultiChoice(name=stem.key)
+        q.set_questiontext(stem.text)
+        for c in correct:
+            q.add_answer(Answer.from_text(c.text, fraction=per))
+        for c in wrong:
+            q.add_answer(Answer.from_text(c.text, fraction=0.0))
+        q.validate()
+        return q
+
+    def _build_singlechoice(self, stem: Stem, subset: Sequence[Choice], correct_members: Set[Choice]) -> SingleChoice:
+        correct = [c for c in subset if c in correct_members]
+        if len(correct) != 1:
+            raise RuntimeError("Internal error: expected exactly one correct after constraint adjustment")
+        chosen = correct[0]
+        q = SingleChoice(name=stem.key)
+        q.set_questiontext(stem.text)
+        q.add_answer(Answer.from_text(chosen.text, fraction=100.0))
+        for c in (x for x in subset if x is not chosen):
+            q.add_answer(Answer.from_text(c.text, fraction=0.0))
+        q.validate()
+        return q
+
+    def _generate_generic(
+        self,
+        *,
+        n: int,
+        limit: int,
+        seed: Optional[int],
+        randomize_order: bool,
+        randomize_branch: bool,
+        correct_bounds: Optional[tuple[int, int]],
+        builder,
+    ) -> QuestionGroup:
+        if not self._choices:
+            raise ValueError("Choice pool is empty; call set_choices()/add_choice() first")
+        if limit <= 0:
+            raise ValueError("limit must be >= 1")
+        out: List[Any] = []
+        base_seed = int(seed) if seed is not None else None
+        pool_items: List[Choice] = list(self._choices.values())
+        for idx, stem in enumerate(self._stems):
+            raw_groups = self._constraints_for_stem(stem)
+            adjusted, correct_members = self._adjust_constraints_for_correct(raw_groups, override_minmax=correct_bounds)
+            stem_seed = None if base_seed is None else (base_seed + idx)
+            subsets = self._pick_subsets(
+                pool=pool_items,
+                groups=adjusted,
+                n=n,
+                seed=stem_seed,
+                limit=limit,
+                randomize_order=randomize_order,
+                randomize_branch=randomize_branch,
+            )
+            for subset in subsets:
+                out.append(builder(stem, subset, correct_members))
+        return QuestionGroup(variants=out)
 
     def generate_multichoice(
         self,
@@ -317,85 +350,28 @@ class MetaChoice:
               If an int, exactly that many corrects.
               If a (min,max) tuple, range of allowed corrects, inclusive.
               If None, use the bounds from the defined "__correct__" group.
-
-        Parameters
-        - n: number of choices to sample per generated MCQ (uniform across stems).
-        - limit: max number of distinct combinations per stem (>=1). Each combination
-                 yields one MultiChoice question.
-        - seed: optional base seed; per-stem seeds are derived deterministically from it.
-        - randomize_order: whether to randomize the order of items before search.
-        - randomize_branch: whether to randomize include/skip decisions during search.
         """
-        if not self._choices:
-            raise ValueError("Choice pool is empty; call set_choices()/add_choice() first")
-        if limit <= 0:
-            raise ValueError("limit must be >= 1")
-        out: List[MultiChoice] = []
-        base_seed = int(seed) if seed is not None else None
-        for idx, stem in enumerate(self._stems):
-            raw_groups = self._constraints_for_stem(stem)
-            # Optionally adjust correct-group bounds per nc
-            if nc is None:
-                groups = raw_groups
+        bounds: Optional[tuple[int, int]]
+        if nc is None:
+            bounds = None
+        else:
+            if isinstance(nc, int):
+                kmin = kmax = int(nc)
             else:
-                # normalize nc
-                if isinstance(nc, int):
-                    kmin = kmax = int(nc)
-                else:
-                    a, b = nc
-                    kmin, kmax = int(min(a, b)), int(max(a, b))
-                if kmin < 0 or kmax < 0 or kmin > kmax or kmax > n:
-                    raise ValueError("Invalid nc bounds; must satisfy 0 <= min <= max <= n")
-                groups = []
-                saw_correct = False
-                for g in raw_groups:
-                    if g.id == "__correct__":
-                        saw_correct = True
-                        groups.append(
-                            BaseConstraint(id=g.id, members=g.members, min=kmin, max=kmax, description=g.description)
-                        )
-                    else:
-                        groups.append(g)
-                if not saw_correct:
-                    raise ValueError("No correct group defined for stem; call set_choices_correct")
-            # derive per-stem seed deterministically
-            stem_seed = None if base_seed is None else (base_seed + idx)
-            subsets = self._pick_subsets(
-                pool=list(self._choices.keys()),
-                groups=groups,
-                n=int(n),
-                seed=stem_seed,
-                limit=int(limit),
-                randomize_order=bool(randomize_order),
-                randomize_branch=bool(randomize_branch),
-            )
-            for subset in subsets:
-                # Determine correct items from reserved local group
-                correct_members: Set[str] = set()
-                for g in stem.local_groups:
-                    if g.id == "__correct__":
-                        correct_members.update(g.members)
-
-                correct_in_subset = [k for k in subset if k in correct_members]
-                wrong_in_subset = [k for k in subset if k not in correct_members]
-
-                # Enforce at least one correct; compute uniform fractions for corrects
-                k = len(correct_in_subset)
-                if k <= 0:
-                    raise RuntimeError("Invariant violated: subset must include at least one correct")
-
-                per = 100.0 / k
-
-                # Name questions using the required stem key
-                q = MultiChoice(name=stem.key)
-                q.set_questiontext(stem.text)
-                for ck in correct_in_subset:
-                    q.add_answer(Answer.from_text(self._choices[ck].text, fraction=per))
-                for wk in wrong_in_subset:
-                    q.add_answer(Answer.from_text(self._choices[wk].text, fraction=0.0))
-                q.validate()
-                out.append(q)
-        return QuestionGroup(variants=out)
+                a, b = nc
+                kmin, kmax = int(min(a, b)), int(max(a, b))
+            if kmin < 0 or kmax < 0 or kmin > kmax or kmax > n:
+                raise ValueError("Invalid nc bounds; must satisfy 0 <= min <= max <= n")
+            bounds = (kmin, kmax)
+        return self._generate_generic(
+            n=n,
+            limit=limit,
+            seed=seed,
+            randomize_order=randomize_order,
+            randomize_branch=randomize_branch,
+            correct_bounds=bounds,
+            builder=self._build_multichoice,
+        )
 
     def generate_singlechoice(
         self,
@@ -412,54 +388,12 @@ class MetaChoice:
         - Internally tightens the reserved "__correct__" group bounds to exactly one
           (min=1, max=1) for sampling. If a stem config has min>1, raises ValueError.
         """
-        if not self._choices:
-            raise ValueError("Choice pool is empty; call set_choices()/add_choice() first")
-        if limit <= 0:
-            raise ValueError("limit must be >= 1")
-        out: List[SingleChoice] = []
-        base_seed = int(seed) if seed is not None else None
-        for idx, stem in enumerate(self._stems):
-            raw_groups = self._constraints_for_stem(stem)
-            adjusted: List[BaseConstraint] = []
-            saw_correct = False
-            for g in raw_groups:
-                if g.id == "__correct__":
-                    saw_correct = True
-                    if g.min > 1:
-                        raise ValueError("generate_singlechoice requires correct-group min<=1")
-                    adjusted.append(BaseConstraint(id=g.id, members=g.members, min=1, max=1, description=g.description))
-                else:
-                    adjusted.append(g)
-            if not saw_correct:
-                raise ValueError("No correct group defined for stem; call set_choices_correct")
-
-            stem_seed = None if base_seed is None else (base_seed + idx)
-            subsets = self._pick_subsets(
-                pool=list(self._choices.keys()),
-                groups=adjusted,
-                n=int(n),
-                seed=stem_seed,
-                limit=int(limit),
-                randomize_order=bool(randomize_order),
-                randomize_branch=bool(randomize_branch),
-            )
-            for subset in subsets:
-                # After adjustment, there must be exactly one correct key in the subset
-                correct_members: Set[str] = set()
-                for g in adjusted:
-                    if g.id == "__correct__":
-                        correct_members.update(g.members)
-                correct_in_subset = [k for k in subset if k in correct_members]
-                if len(correct_in_subset) != 1:
-                    raise RuntimeError("Internal error: expected exactly one correct after constraint adjustment")
-                chosen = correct_in_subset[0]
-
-                q = SingleChoice(name=stem.key)
-                q.set_questiontext(stem.text)
-                q.add_answer(Answer.from_text(self._choices[chosen].text, fraction=100.0))
-                for wk in (k for k in subset if k != chosen):
-                    q.add_answer(Answer.from_text(self._choices[wk].text, fraction=0.0))
-                q.validate()
-                out.append(q)
-        return QuestionGroup(variants=out)
-
+        return self._generate_generic(
+            n=n,
+            limit=limit,
+            seed=seed,
+            randomize_order=randomize_order,
+            randomize_branch=randomize_branch,
+            correct_bounds=(1, 1),
+            builder=self._build_singlechoice,
+        )

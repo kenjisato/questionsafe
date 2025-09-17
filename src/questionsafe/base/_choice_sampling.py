@@ -117,13 +117,13 @@ def constrained_subsets(
                 count[g] -= 1
 
     def violates_upper() -> bool:
-        for g, (L, U) in bounds.items():
+        for g, (_L, U) in bounds.items():
             if count[g] > U:
                 return True
         return False
 
     def lower_reachable(i: int) -> bool:
-        for g, (L, U) in bounds.items():
+        for g, (L, _U) in bounds.items():
             if count[g] + suf[g][i] < L:
                 return False
         return True

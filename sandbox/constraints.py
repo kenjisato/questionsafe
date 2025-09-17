@@ -41,14 +41,14 @@ def enumerate_sets(
                 count[g] -= 1
 
     def violates_upper() -> bool:
-        for g, (L, U) in bounds.items():
+        for g, (_L, U) in bounds.items():
             if count[g] > U:
                 return True
         return False
 
     def lower_reachable(i: int) -> bool:
         # Even taking ALL remaining eligible items, can we still hit each lower bound?
-        for g, (L, U) in bounds.items():
+        for g, (L, _U) in bounds.items():
             if count[g] + suf[g][i] < L:
                 return False
         return True
@@ -110,19 +110,19 @@ def find_one(
 
 
 #------
-
-c1 = Choice("He served one period.")
-c2 = Choice("He served two periods.")
-c3 = Choice("He withdrew from the TPP.")
-c4 = Choice("He was awarded the Nobel Peace Prize.")
-c5 = Choice("He led the post-pandemic recovery.")
-c6 = Choice("He is/was a Democrat.")
-
-correct = ChoiceGroup("correct", {c2, c4, c6}, (1, -1))
-terms = ChoiceGroup("terms", {c1, c2}, (1, 1))
-policy = ChoiceGroup("policy", {c3, c5}, (1, 0))
-award = ChoiceGroup("award", {c4}, (0, 0))
-party = ChoiceGroup("party", {c6}, (0, None))
+# The following sandbox examples reference Choice/ChoiceGroup symbols that are not
+# defined in this file. Commenting them out to satisfy linters while keeping context.
+# c1 = Choice("He served one period.")
+# c2 = Choice("He served two periods.")
+# c3 = Choice("He withdrew from the TPP.")
+# c4 = Choice("He was awarded the Nobel Peace Prize.")
+# c5 = Choice("He led the post-pandemic recovery.")
+# c6 = Choice("He is/was a Democrat.")
+# correct = ChoiceGroup("correct", {c2, c4, c6}, (1, -1))
+# terms = ChoiceGroup("terms", {c1, c2}, (1, 1))
+# policy = ChoiceGroup("policy", {c3, c5}, (1, 0))
+# award = ChoiceGroup("award", {c4}, (0, 0))
+# party = ChoiceGroup("party", {c6}, (0, None))
 
 
 class ChoiceRange:
