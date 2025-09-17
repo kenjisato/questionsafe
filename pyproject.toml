@@ -13,6 +13,10 @@ dependencies = [
     "lxml>=6.0.0",
     "pydantic>=2.11.7",
     "typer>=0.16.0",
+    "python-frontmatter>=1.1.0",
+    "quarto>=0.1.0",
+    "textual>=6.1.0",
+    "inquirerpy>=0.3.4",
 ]
 
 [project.urls]
@@ -41,7 +45,12 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/questionsafe"]
-include = ["src/questionsafe/templates/*.j2"]
+include = ["src/questionsafe/cli/templates/*.j2"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/questionsafe/templates/*.j2"]
+include = ["src/questionsafe/cli/templates/*.j2"]
+
+[tool.ruff]
+exclude = [
+  "typings/**",
+]

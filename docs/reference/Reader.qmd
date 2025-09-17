@@ -1,0 +1,18 @@
+# Reader { #questionsafe.Reader }
+
+```python
+Reader(path, *, answer_dir=None, question_dir=None)
+```
+
+Read a single question from a Markdown file with YAML front matter.
+
+Usage
+- md = Reader("path/to/a_question.md")
+- q = md.read()  # -> a Question instance (e.g., Q.SingleChoice)
+
+Supported types (initial): singlechoice
+
+Parameters
+- path: the Markdown file to read.
+- answer_dir: base directory to resolve include: entries. If None, resolves relative to the document’s directory. Includes are merged single-level only; nested include keys inside included files are ignored.
+- question_dir: base directory to resolve cloze.file entries (embedded sub-questions). If None, resolves relative to the cloze document’s directory.

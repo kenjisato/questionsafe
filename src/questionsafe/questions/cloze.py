@@ -10,7 +10,7 @@ from ._cloze_embed import ClozeEmbeddable
 class Cloze(Question):
     """Embedded (CLOZE) question composed inline in the question text.
 
-    Placeholders in the stem use double square brackets: ``[[identifier]]``.
+    Placeholders in the stem use double curly braces: ``{{identifier}}``.
     Register embedded questions with ``embed_question()`` where the embedded
     question's ``name`` provides the ``identifier``.
     """
@@ -29,7 +29,7 @@ class Cloze(Question):
         Parameters
         - q: SingleChoice | MultiChoice | ShortAnswer | Numerical
             Embedded sub-question. Its ``name`` is used as the placeholder
-            identifier and must exist in the stem as ``[[name]]``.
+            identifier and must exist in the stem as ``{{name}}``.
         - orientation: Optional[Literal["v", "h"]]
             Orientation for choice-based questions (ignored for ShortAnswer and Numerical):
             - SingleChoice: None -> MC (dropdown), "v" -> MCV (vertical radios), "h" -> MCH (horizontal radios)
@@ -51,9 +51,12 @@ class Cloze(Question):
 
     # Public helper for writer and users: produce inline CLOZE tokens and replace placeholders
     def compile_text(self) -> str:
+        import re
+
         text = self.questiontext.text  # type: ignore[attr-defined]
         for ident, (subq, orientation, weight) in self._embedded.items():
             token = subq.cloze(orientation=orientation, weight=weight)
-            placeholder = f"[[{ident}]]"
-            text = text.replace(placeholder, token)
+            # Match {{ ident }} with optional whitespace around ident
+            pattern = re.compile(r"\{\{\s*" + re.escape(str(ident)) + r"\s*\}\}")
+            text = pattern.sub(token, text)
         return text

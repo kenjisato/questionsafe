@@ -1,0 +1,279 @@
+---
+title: "Markdown Input Schema"
+page-layout: article
+---
+
+# Markdown Input Schema
+
+This document defines the YAML schema used in front matter for writing questions in Markdown. One question per file; the Markdown body becomes the question stem (questiontext). Unless specified otherwise, the body is interpreted as Markdown format.
+
+## Common fields (all types)
+
+- type: string
+  - One of: singlechoice, multichoice, shortanswer, numerical, truefalse, essay, description
+- name: string
+- defaultgrade: float
+- tags: list[str]
+- id: string
+- questiontext_format or format: string (default: markdown)
+- feedback.general: string or {text, format}
+
+### Hints and penalty (where supported)
+
+- hints: list of string or {text, format}
+- hint_penalty: float
+
+### Combined feedback (where supported)
+
+- feedback.correct: string or {text, format}
+- feedback.partiallycorrect: string or {text, format}
+- feedback.incorrect: string or {text, format}
+
+Notes:
+- When a question type does not support a configuration (e.g., combined feedback for SingleChoice), the importer will emit a warning and ignore it.
+- If conflicting configurations are given (e.g., both answers and choices), the importer raises an error.
+
+## SingleChoice
+
+Single-answer choice question; exactly one correct answer with fraction=100 and no other positive fractions. Supports choice_layout (labels/shuffle/single_choice), hints, general feedback, tags, id.
+
+Unsupported: combined feedback (correct/partiallycorrect/incorrect) — ignored with a warning.
+
+### Short-hand
+
+```yaml
+---
+type: singlechoice
+name: str
+choices:
+  correct: [str]    # exactly one
+  wrong: [str, ...]
+choice_layout:
+  labels: abc|ABCD|123|iii|III|none
+  shuffle: bool
+tags: [str, ...]
+id: str
+defaultgrade: float
+---
+Question stem in Markdown
+```
+
+### Full-form
+
+```yaml
+---
+type: singlechoice
+name: str
+defaultgrade: float
+answers:
+  - text: str
+    fraction: float                # 100 for the correct; <=0 for wrongs
+    feedback: str | {text, format} # optional
+answernumbering: abc|ABCD|123|iii|III|none
+shuffleanswers: bool
+hints:
+  - str | {text, format}
+hint_penalty: float
+feedback:
+  general: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question stem in Markdown
+```
+
+## MultiChoice
+
+Multiple-choice (checkbox or single radio UI). Positive fractions must sum to 100. Supports choice_layout (labels/shuffle/single_choice), hints, general and combined feedback.
+
+### Short-hand
+
+```yaml
+---
+type: multichoice
+name: str
+choices:
+  correct: [str, ...]    # uniformly split to sum 100
+  wrong: [str, ...]
+choice_layout:
+  labels: abc|ABCD|123|iii|III|none
+  shuffle: bool
+  single_choice: bool  # default false
+hints:
+  - str | {text, format}
+hint_penalty: float
+feedback:
+  general: str | {text, format}
+  correct: str | {text, format}
+  partiallycorrect: str | {text, format}
+  incorrect: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question stem
+```
+
+### Full-form
+
+```yaml
+---
+type: multichoice
+name: str
+defaultgrade: float
+answers:
+  - text: str
+    fraction: float                # positives must sum to 100
+    feedback: str | {text, format} # optional
+single: bool
+answernumbering: abc|ABCD|123|iii|III|none
+shuffleanswers: bool
+hints:
+  - str | {text, format}
+hint_penalty: float
+feedback:
+  general: str | {text, format}
+  correct: str | {text, format}
+  partiallycorrect: str | {text, format}
+  incorrect: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question stem
+```
+
+## TrueFalse
+
+Exactly two answers with texts 'true' and 'false'. Supports general feedback only.
+
+```yaml
+---
+type: truefalse
+name: str
+defaultgrade: float
+answers:
+  - text: true|false
+    fraction: 100|0
+    feedback: str | {text, format}
+feedback:
+  general: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question stem
+```
+
+## ShortAnswer
+
+Accepted strings with optional fractions. Supports hints/penalty and combined feedback.
+
+```yaml
+---
+type: shortanswer
+name: str
+defaultgrade: float
+answers:
+  - text: str
+    fraction: float                # default 100
+    feedback: str | {text, format} # optional
+case_sensitive: true|false         # true: case sensitive (default false)
+hints:
+  - str | {text, format}
+hint_penalty: float
+feedback:
+  general: str | {text, format}
+  correct: str | {text, format}
+  partiallycorrect: str | {text, format}
+  incorrect: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question stem
+```
+
+## Numerical
+
+Numeric answers with optional tolerance; optional units.
+
+```yaml
+---
+type: numerical
+name: str
+defaultgrade: float
+answers:
+  - answer: float
+    tolerance: float
+    fraction: float                # default 100
+    feedback: str | {text, format}
+units:                              # optional
+  units:
+    - name: str
+      multiplier: float
+      grade: float
+  showunits: int
+  unitgradingtype: int
+  unitpenalty: float
+  unitsleft: bool
+hints:
+  - str | {text, format}
+hint_penalty: float
+feedback:
+  general: str | {text, format}
+  correct: str | {text, format}
+  partiallycorrect: str | {text, format}
+  incorrect: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question stem
+```
+
+## Essay
+
+Essay/free-text question. No graded answers, but rich response configuration is supported.
+
+```yaml
+---
+type: essay
+name: str
+defaultgrade: float
+response:
+  textarea:
+    format: editor|editorfilepicker|monospaced|plain|noinline
+    required: bool
+    lines: int
+    min_words: int
+    max_words: int
+    template: str | {text, format} | { path: str }
+  attachments:
+    count: int
+    required: bool
+    maxbytes: int
+    filetypelist: [str, ...]
+graderinfo: str | {text, format} | { path: str }
+feedback:
+  general: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Question prompt
+```
+
+Notes:
+- If textarea.format is "noinline", then attachments.count must be > 0 and attachments.required must be true.
+- When template is given as { path: "..." } or graderinfo is { path: "..." }, the Reader expands ~, $VAR, and ${VAR} using variables from questionsafe.yml in the current working directory (falling back to environment variables).
+
+## Description
+
+Informational text; no answers.
+
+```yaml
+---
+type: description
+name: str
+feedback:
+  general: str | {text, format}
+tags: [str, ...]
+id: str
+---
+Description body
+```

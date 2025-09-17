@@ -2,7 +2,8 @@
 <question type="shortanswer">
   {{ mx.name_and_stem(n) }}
   {{ mx.defaultgrade_penalty(n) }}
-  <usecase>{{ n.usecase }}</usecase>
+  {{ mx.general_feedback_block(n) }}
+  <usecase>{{ 1 if n.case_sensitive else 0 }}</usecase>
   {{ mx.answer_text_block(n.answers) }}
   {{- mx.combined_block(n) -}}
   {{- mx.hints_block(n) -}}

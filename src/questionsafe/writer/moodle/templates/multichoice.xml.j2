@@ -2,6 +2,7 @@
 <question type="multichoice">
   {{ mx.name_and_stem(n) }}
   {{ mx.defaultgrade_penalty(n) }}
+  {{ mx.general_feedback_block(n) }}
   {{ mx.answer_text_block(n.answers) }}
   <shuffleanswers>{{ 1 if n.shuffleanswers else 0 }}</shuffleanswers>
   <single>{{ n.single | xmlbool }}</single>

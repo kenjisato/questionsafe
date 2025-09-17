@@ -14,6 +14,14 @@
   {%- endif %}
 {%- endmacro %}
 
+{%- macro general_feedback_block(n) %}
+  {%- if n.feedback_general_text %}
+  <generalfeedback format="{{ n.feedback_general_format | default('html') }}">
+    <text>{{ n.feedback_general_text | cdata }}</text>
+  </generalfeedback>
+  {%- endif %}
+{%- endmacro %}
+
 {% macro feedback_block(text, fmt) -%}
   {%- if text %}
     <feedback format="{{ fmt | default('html') }}">

@@ -21,9 +21,9 @@ def _(q: MultiChoice):
                 }
                 for a in q.answers
             ],
-            "single": q.single,
-            "shuffleanswers": 1 if q.shuffleanswers else 0,
-            "answernumbering": q.answernumbering,
+            "single": bool(getattr(q, "single_choice", getattr(q, "single", False))),
+            "shuffleanswers": 1 if bool(getattr(q, "shuffle", getattr(q, "shuffleanswers", True))) else 0,
+            "answernumbering": getattr(q, "labels", getattr(q, "answernumbering", "none")),
         }
     )
     return d

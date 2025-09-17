@@ -75,12 +75,12 @@ def test_cloze_compile_text_and_duplicate_names():
 
     cl = Q.Cloze(
         name="C1",
-        questiontext=QuestionText("<p>Choose [[s]] and spell [[sa]]</p>"),
+        questiontext=QuestionText("<p>Choose {{ s }} and spell {{  sa }}</p>"),
     )
     cl.embed_question(sc, orientation="v").embed_question(sa)
 
     compiled = cl.compile_text()
-    assert "[[s]]" not in compiled and "[[sa]]" not in compiled
+    assert "{{ s }}" not in compiled and "{{  sa }}" not in compiled
     assert "{1:MCV:" in compiled
     assert "{1:SHORTANSWER:" in compiled or "{1:SHORTANSWER_C:" in compiled
 
@@ -96,16 +96,16 @@ def test_cloze_embed_weight_validation_and_empty_answer_guard():
         .set_choices_correct("A")
         .set_choices_wrong("B")
     )
-    cl = Q.Cloze(name="C2", questiontext=QuestionText("<p>[[s2]]</p>"))
+    cl = Q.Cloze(name="C2", questiontext=QuestionText("<p>{{  s2 }}</p>"))
 
     # weight must be nonnegative integer
     cl.embed_question(sc_ok, weight=0)  # allowed
 
-    cl2 = Q.Cloze(name="C2b", questiontext=QuestionText("<p>[[s2]]</p>"))
+    cl2 = Q.Cloze(name="C2b", questiontext=QuestionText("<p>{{ s2 }}</p>"))
     with pytest.raises(ValueError):
         cl2.embed_question(sc_ok, weight=-1)
 
-    cl3 = Q.Cloze(name="C2c", questiontext=QuestionText("<p>[[s2]]</p>"))
+    cl3 = Q.Cloze(name="C2c", questiontext=QuestionText("<p>{{ s2 }}</p>"))
     with pytest.raises(TypeError):
         cl3.embed_question(sc_ok, weight=1.5)  # non-integer not allowed
 

@@ -11,7 +11,7 @@ def safe_api(fn: Callable[..., Any]) -> Callable[..., Any]:
     - Attaches an attribute `_safe_api = True` for introspection.
     - Prefixes the docstring with "[SAFE] " if not already present so IDEs/help() show it.
     """
-    setattr(fn, "_safe_api", True)
+    fn._safe_api = True
     doc = getattr(fn, "__doc__", None)
     if doc:
         trimmed = doc.lstrip()

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+
+<question type="cloze">
+  <name><text>Japan/Cities</text></name>
+  <questiontext format="markdown">
+    <text><![CDATA[The capital of Japan is {1:MC:=Tokyo~Osaka~Kyoto~Kanagawa}. 
+
+Choose stations in Tokyo.
+{2:MRH:%50.0%Shinagawa~%50.0%Shinjuku~Yokohama~Omiya}]]></text>
+  </questiontext>
+  
+  <idnumber></idnumber>
+</question>
+
+</quiz>

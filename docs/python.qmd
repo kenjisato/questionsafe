@@ -1,0 +1,265 @@
+---
+title: "Python API Guide"
+page-layout: article
+---
+
+This guide demonstrates common fluent patterns across the question types.
+
+## General rules
+
+- set_* methods overwrite/replace existing values
+- add_* methods append to list-like attributes
+
+## SingleChoice examples
+
+```{python}
+#| echo: true
+from questionsafe import Q, Text
+sc = (
+    Q.SingleChoice(name="SC/Basic", questiontext=Text("<p>Pick one</p>"))
+    .set_choice_correct("A")
+    .set_choices_wrong("B")
+)
+sc
+```
+
+Note:
+- SingleChoice.add_choice_correct is guarded and will raise if a correct answer already exists. For advanced scenarios (e.g., partial-credit experiments), use low-level add_answer or set_answers. Validation still enforces exactly one correct with fraction=100.
+
+## MultiChoice examples
+
+```{python}
+#| echo: true
+from questionsafe import Q, Text
+mc1 = (
+    Q.MultiChoice(
+        name="Capitals/TH",
+        questiontext=Text("<p>Capital of Thailand?</p>")
+    )
+    .set_choices_correct("Bangkok")  # 1 item -> 100
+)
+```
+
+Note:
+- MultiChoice.add_choice_correct follows the colorful/safe contract:
+  - If no correct exists, it adds 100.
+  - If corrects are uniform and sum to 100, it recalculates a new uniform fraction and snaps to the nearest allowed Moodle fraction (e.g., 33.33333 for 1/3). If it can't snap (e.g., 100/11), it raises and recommends using set_answers.
+  - If existing corrects are non-uniform or don't sum to 100, it raises and recommends using set_answers.
+
+## Multiple-answer with two correct answers (50/50) and two wrong answers
+
+```{python}
+#| echo: true
+from questionsafe import Q, Text
+mc2 = (
+    Q.MultiChoice(
+        name="Capitals/EU",
+        questiontext=Text("<p>Pick EU capitals</p>")
+    )
+    .set_choices_correct("Paris", "Berlin")  # -> 50 each
+    .set_choices_wrong("Madrid", "Zurich", fraction=0.0)
+)
+mc2
+```
+
+## Non-uniform fractions: use low-level set_answers
+
+```{python}
+#| echo: true
+from questionsafe import Q, Text, Answer
+mc3 = Q.MultiChoice(name="Math/Primes", questiontext=Text("<p>Pick primes</p>"))
+mc3.set_answers(
+    Answer.Text(text="2", fraction=60),
+    Answer.Text(text="3", fraction=40),
+    Answer.Text(text="4", fraction=0),
+)
+mc3
+```
+
+## TrueFalse examples
+
+```{python}
+#| echo: true
+# pulls from examples/truefalse.py pattern, but run inline for Quarto
+from questionsafe import Q, Quiz
+q = (
+    Q.TrueFalse(
+        name="Logic/DeMorgan",
+        questiontext="True or False: Not(A and B) == (Not A) or (Not B)"
+    )
+    .set_correct_if_true()
+)
+Quiz([q]).to_xml()[:200]
+```
+
+### Notes
+
+- Re-invoking set_* rebuilds and overwrites previous choices and feedback unless provided again.
+- For templating overrides (XML/HTML), pass templates_dir to render_xml/render_html.
+
+## Numerical precision and equality
+
+Rationale and behavior
+- Input parsing (Markdown Reader): numeric strings are parsed with Decimal and quantized to 1e-15, then converted to float. This reduces accidental binary rounding artifacts from authoring.
+- Equality (tests/semantic comparisons): NumericalAnswer.value and .tolerance are rounded to 15 decimal places when constructing the equality key. This ensures that common identities like 0.3 + 0.3 + 0.3 and 0.9 are considered equal, while providing high precision for comparisons.
+- Formatting (CLOZE): numerical values and tolerances are emitted with 15 significant digits to keep XML/CLOZE stable and readable.
+
+Notes
+- Python floats cannot represent certain decimals exactly. For example, float("0.89999999999999") equals float("0.9"). With our pipeline, both normalize to the same float and will compare equal.
+- If you require grading to accept tiny differences, specify an explicit tolerance. Relying on Moodle’s implicit epsilon for tolerance=0 is not recommended.
+
+Shorthand in Markdown Reader
+- When a Numerical has exactly one answer, you can use a shorthand key answer instead of answers:
+  - Simplest form (fraction fixed to 100):
+    
+    ```yaml
+    type: numerical
+    name: N/Scalar
+    answer: 0.9
+    ```
+  - With tolerance (and optional feedback):
+    
+    ```yaml
+    type: numerical
+    name: N/WithTol
+    answer:
+      value: 0.9
+      tolerance: 0
+      feedback: correct
+    ```
+
+Rules
+- Provide either answers or answer, not both (mutually exclusive).
+- For the shorthand answer form, fraction is always 100.0 (any provided fraction is ignored).
+- All numeric values are parsed via Decimal and quantized to 1e-15 before converting to float.
+
+Examples
+```python
+# API vs YAML: equal
+from questionsafe import Q, Reader, Text
+q_yaml = Reader("/path/to/file.md").read()  # answers: [{value: "0.9", tolerance: 0}] or answer: 0.9
+q_api = Q.Numerical("N/Exact").ask(Text("Any text", format="markdown")).add_answer(0.3 + 0.3 + 0.3, tolerance=0)
+assert q_yaml == q_api
+```
+
+## ShortAnswer shorthand in Markdown Reader
+
+When a ShortAnswer has exactly one accepted answer, you can use a shorthand key answer instead of answers. The shorthand sets fraction=100.0 automatically.
+
+- Simplest form (fraction fixed to 100):
+
+  ```yaml
+  type: shortanswer
+  name: SA/Scalar
+  answer: Tokyo
+  ```
+
+- With feedback:
+
+  ```yaml
+  type: shortanswer
+  name: SA/WithFB
+  answer:
+    text: Tokyo
+    feedback: correct
+  ```
+
+Rules
+- Provide either answers or answer, not both (mutually exclusive).
+- For the shorthand answer form, fraction is always 100.0 (any provided fraction is ignored).
+- Case sensitivity can be set via usecase: 1 (case-sensitive) or 0 (default, case-insensitive).
+
+Examples
+```python
+# API vs YAML: equal
+from questionsafe import Q, Reader, Text
+q_yaml = Reader("/path/to/file.md").read()  # answer: Tokyo
+q_api = Q.ShortAnswer("SA/Scalar").ask(Text("Capital of Japan?", format="markdown")).add_answer("Tokyo", fraction=100)
+assert q_yaml == q_api
+```
+
+## Cloze embedding and Markdown Reader
+
+Placeholders
+- Use double curly braces {{identifier}} inside the question text to indicate where an embedded sub-question should be compiled.
+
+Markdown form
+
+```yaml
+---
+name: Japan/Cities
+type: cloze
+cloze:
+  gap1: schoice.md
+  gap2:
+    - file: mchoice.md
+    - orientation: h
+    - weight: 2
+---
+
+The capital of Japan is {{gap1}}.
+Choose stations in Tokyo.
+{{gap2}}
+```
+
+Python equivalence
+
+```python
+from questionsafe import Q, Reader
+
+gap1 = Reader("schoice.md").read().set_name("gap1")
+gap2 = Reader("mchoice.md").read().set_name("gap2")
+clz = (
+  Q.Cloze("Japan/Cities")
+  .ask("The capital of Japan is {{gap1}}.\nChoose stations in Tokyo.\n{{gap2}}")
+  .embed_question(gap1)
+  .embed_question(gap2, orientation="h", weight=2)
+)
+```
+
+Notes
+- The cloze mapping accepts:
+  - A string path (gap1: schoice.md)
+  - A mapping (gap2: {file: mchoice.md, orientation: h, weight: 2})
+  - A list of single-key mappings (gap2: [ {file: ...}, {orientation: ...}, {weight: ...} ])
+- If cloze is omitted, the body may contain raw CLOZE tokens already; the Reader leaves them as-is.
+
+Path resolution
+- question_dir controls resolution of cloze.file and defaults to the cloze file’s directory.
+- answer_dir controls resolution of include: files and defaults to the current document’s directory.
+- Includes are single-level (no nested include merging). Child documents resolve their own include relative to themselves unless you explicitly pass answer_dir when reading those child documents.
+
+## Safe API index
+
+You can list the "safe" (validation-proof) methods programmatically:
+
+```{python}
+#| echo: true
+from questionsafe import Q
+from questionsafe.base import list_safe_apis
+list_safe_apis(Q.MultiChoice)
+```
+
+```{python}
+#| echo: true
+list_safe_apis(Q.SingleChoice)
+```
+
+```{python}
+#| echo: true
+list_safe_apis(Q.TrueFalse)
+```
+
+Tip: In many IDEs, safe methods are also prefixed with "[SAFE]" in the tooltip since their docstrings are annotated.
+
+## API summary (selected)
+
+- Common to all questions: set_name, set_questiontext/ask, set_feedback_general, set_defaultgrade, set_tags/add_tag, set_idnumber
+- Hints and penalties: add_hint, set_hints (penalty can be "auto"), set_penalty
+- Combined feedback: set_combined_feedback, set_feedback_correct/partiallycorrect/incorrect
+- MultiChoice: set_numbering, set_shuffle, set_single, set_choice_correct, set_choices_wrong, set_answers
+- TrueFalse: set_choice_correct, set_choice_wrong
+- ShortAnswer: set_usecase, set_answers, add_answer
+- Numerical: set_answers, set_units/add_units
+- Essay: various setters for response and attachments
+

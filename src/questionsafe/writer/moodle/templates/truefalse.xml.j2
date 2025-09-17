@@ -1,7 +1,8 @@
 {% import "_macros.xml.j2" as mx %}
 <question type="truefalse">
-  {{- mx.name_and_stem(n) -}}
+  {{ mx.name_and_stem(n) -}}
   {{- mx.defaultgrade_penalty(n) -}}
+  {{- mx.general_feedback_block(n) -}}
   {{- mx.answer_text_block(n.answers) -}}
   {{- mx.tags_and_id(n) }}
 </question>

@@ -11,6 +11,10 @@ def embed_example(q: "Quiz", title: str | None = None, height_offset: int = 50) 
     print(f"""<iframe srcdoc="{html}" onload='javascript:(function(o){{var _height=o.contentWindow.document.body.scrollHeight+{height_offset};o.style.height=_height+"px";}}(this));' style='overflow: hidden;'></iframe>""")
 ```
 
+## Markdown schema
+
+See the detailed schema for YAML front matter: [Markdown Input Schema](markdown-schema.qmd)
+
 ## Examples by question types
 
 The most typical usecase requires top-level `Q` to define a question and `Quiz` to define a set of questions.
@@ -351,6 +355,83 @@ mc.set_answers(
     Answer.from_text("Zurich", fraction=0),
 )
 sc, mc
+```
+
+## Project scaffolding and templates
+
+You can scaffold a project and use templates for authoring Markdown questions.
+
+- Initialize a project:
+
+```bash
+uv run questionsafe init .
+```
+
+This creates the following structure:
+
+```
+.
+├── questions
+├── questionsafe.yml
+└── templates
+    ├── essay.md.j2
+    ├── multichoice.md.j2
+    ├── singlechoice.md.j2
+    └── ...
+```
+
+- Configuration (questionsafe.yml):
+
+```yaml
+project:
+  questions: ./questions   # authoring root used by `questionsafe create`
+  templates: ./templates   # where *.md.j2 templates are discovered
+variables:
+  ROOT: /absolute/or/relative/path  # available as $ROOT (overrides OS env)
+```
+
+Variable expansion (Reader)
+- The Markdown Reader expands ~, $VAR and ${VAR} using variables from questionsafe.yml in the current working directory; if a variable is not defined there, it falls back to the OS environment.
+- Applied to:
+  - include: "$ROOT/inc.yml"
+  - cloze:
+    gap1:
+      file: "$ROOT/schoice.md"
+  - essay:
+    response.textarea.template:
+      path: "$ROOT/template.md"
+    graderinfo:
+      path: "$ROOT/grading-guide.md"
+- CLI templates also receive a VARS mapping so you can reference {{ VARS.ROOT }} in templates if needed.
+
+- Creating new questions from templates:
+
+```bash
+uv run questionsafe create   # interactive prompts
+uv run questionsafe create questions/q1.md --name "Sample/SC" --type singlechoice
+```
+
+- Templates:
+  - Discovered by listing `*.md.j2` files in the configured templates directory.
+  - The filename stem is the template name (e.g., numerical_unit.md.j2 -> `--type numerical_unit`).
+  - Jinja2 context provides `name` for use in front matter.
+
+## Cloze (embedded)
+
+```{python}
+#| echo: true
+from questionsafe import Q, Reader
+# Build sub-questions
+sc = Reader("schoice.md").read().set_name("gap1")
+mc = Reader("mchoice.md").read().set_name("gap2")
+# Embed into a Cloze stem
+clz = (
+  Q.Cloze("Japan/Cities")
+  .ask("The capital of Japan is {{gap1}}.\nChoose stations in Tokyo.\n{{gap2}}")
+  .embed_question(sc)
+  .embed_question(mc, orientation="h", weight=2)
+)
+clz
 ```
 
 ### Categories

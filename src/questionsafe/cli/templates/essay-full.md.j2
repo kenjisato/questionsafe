@@ -1,0 +1,27 @@
+---
+type: essay
+name: {{ name }}
+defaultgrade: 1.0
+response:
+  textarea:
+    format: editor        # editor (default) | editorfilepicker | monospaced | plain | noinline
+    required: false       # BOOL (default = false)
+    lines: 10             # INT  (default = 10)
+    min_words: 0          # INT  (default = 0)
+    max_words: 0          # INT  (default = 0)
+    template:             # STR|TEXTLIKE or { path: STR }
+      path: ""
+  attachments:
+    count: 0              # INT  (default = 0)
+    required: false       # BOOL (default = false)
+    maxbytes: 0           # INT  (default = 0)
+    filetypelist: []      # LIST (default = [])
+graderinfo:
+feedback:
+  general: ""
+tags: []
+id: ""
+---
+
+Write your question here.
+

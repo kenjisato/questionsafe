@@ -7,13 +7,14 @@ from .base import Text  # new user-facing rich text value
 from .base._answer import Answer  # user-facing coercion interface
 
 # Re-export top-level helpers for convenience: questionsafe.render_xml(...), questionsafe.write_xml(...)
+from .writer import render_xml, render_html, write_xml, write_html
+from .base import list_safe_apis  # surfaced for convenience
+
 # Short alias for the questions facade
 Q = questions  # questions facade (e.g., Q.MultiChoice)
 
-# Re-export top-level helpers for convenience: questionsafe.render_xml(...), questionsafe.write_xml(...)
-from .writer import render_xml, render_html, write_xml, write_html  # noqa: E402
-from .base import list_safe_apis  # surfaced for convenience
-
+# Import Reader after Q is defined to avoid circular import during package init
+from .importers import Reader  # noqa: E402  Markdown Reader (MD -> Question)
 __all__ = [
     # facades
     "Q",
@@ -31,4 +32,6 @@ __all__ = [
     "write_html",
     # safe API tooling
     "list_safe_apis",
+    # importers
+    "Reader",
 ]

@@ -1,0 +1,21 @@
+---
+name: Japan/Cities
+type: cloze
+cloze:
+  gap1: schoice.md
+  gap2: 
+    - file: mchoice.md
+    - orientation: h
+    - weight: 2
+---
+
+
+The capital of Japan is {{gap1}}. 
+
+Choose stations in Tokyo.
+{{ gap2 }}
+
+```{python}
+print("Hello")
+```
+

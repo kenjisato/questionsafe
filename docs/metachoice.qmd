@@ -1,0 +1,90 @@
+---
+title: "MetaChoice: Generating MultiChoice Variants"
+page-layout: article
+---
+
+This guide explains how to generate multiple-choice questions (MCQs) from a shared pool of choices using MetaChoice. You can define global and per-stem constraints, mark correct choices by keys, and generate one or multiple combinations per stem.
+
+Key ideas:
+- Use Choice(key, text) to register choices with a short identifier and a long display text.
+- Group constraints operate on keys.
+- Stems have required keys and texts; you can add per-stem groups and mark correct choices.
+- Generation samples subsets of size n that satisfy all constraints; you may generate multiple variants per stem (limit).
+
+## Quick start
+
+```{python}
+#| echo: true
+from questionsafe.meta import MetaChoice, Stem, Choice, Constraint
+
+mc = (
+    MetaChoice()
+    .set_choices([
+        Choice("T1", "President T1"),
+        Choice("T2", "President T2"),
+        Choice("P1", "Policy P1"),
+        Choice("P2", "Policy P2"),
+        Choice("A1", "Attractor A1"),
+    ])
+    .add_constraint(Constraint("term", choices={"T1", "T2"}, min=1, max=1))
+    .add_constraint(Constraint("policy", choices={"P1", "P2"}, min=0, max=1))
+)
+
+mc.add_stem(Stem("TERM_Q", "Who served two terms?").set_choices_correct({"T1", "T2"}))
+mc.add_stem(Stem("TERM_POLICY_Q", "Pick a term and a policy").set_choices_correct({"T1", "T2"}).add_constraint(Constraint("policy", choices={"P1","P2"}, min=1, max=1)))
+
+group = mc.generate_multichoice(n=3, limit=2, seed=42)
+# Combine with a Quiz
+from questionsafe.quiz import Quiz
+Quiz(category="Demo").add_group(group)
+# Peek at first two variants
+group.variants[0], group.variants[1]
+```
+
+## Shorthand inputs for choices
+
+Preferred: Choice objects. Shorthand coercions are supported for convenience:
+
+- Dict mapping: {"id": "long text", ...}
+- Strings with a colon: "id: long text" (first colon splits). If no colon, the same string is used as both key and text.
+
+```{python}
+#| echo: true
+from questionsafe.meta import MetaChoice
+mc = MetaChoice()
+mc.set_choices({"X": "Long X", "Y": "Long Y"})
+mc.add_choices(["Z: Long Z", "W"])  # W -> key==text
+list(mc._choices.keys())
+```
+
+Duplicate keys raise ValueError in set_choices/add_choices/add_choice.
+
+## Stems and correctness
+
+Define per-stem constraints and correct groups by keys. Correctness is just another group—MetaChoice uses an internal reserved id ("__correct__").
+
+```{python}
+#| echo: true
+from questionsafe.meta import MetaChoice, Stem, Choice, Constraint
+mc = MetaChoice().set_choices(["A", "B", "C"])  # shorthand key==text
+s = Stem("S1", "Pick A and one more").set_group_correct({"A"})
+mc.add_stem(s)
+group = mc.generate_multichoice(n=2, limit=1, seed=1)
+[a.text for a in group.variants[0].answers]
+```
+
+## Generation controls
+
+- n: number of choices per generated MCQ, uniform across stems.
+- limit: maximum number of distinct combinations per stem; total MCQs <= (#stems × limit), capped by feasibility.
+- seed: base seed; per-stem seeds are derived deterministically (seed + index).
+- randomize_order / randomize_branch: control randomness in the sampler.
+
+Answers are always listed in the registered pool order for stability.
+
+## Design notes
+
+- Choice keys decouple identifiers from long texts, allowing stable grouping and constraints.
+- All groups operate on keys; the sampler never touches raw text—only keys.
+- MultiChoice answers are materialized from keys by looking up the registered Choice text; uniform fractions (100/k) are assigned to the k correct items in each variant.
+

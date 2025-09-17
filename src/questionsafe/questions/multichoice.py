@@ -25,17 +25,17 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     Notes
     - set_choices_correct distributes 100% uniformly across provided texts (100/N).
     - Use low-level set_answers() for non-uniform fractions or full control.
-    - Use set_single(True) to render as radio buttons (single selection) while still allowing
+    - Use set_single_choice(True) to render as radio buttons (single selection) while still allowing
       partial credit across answers if their positive fractions sum to 100.
 
     Attributes
     - answers: List[Answer]
         Choice options with grading fractions and optional feedback.
-    - single: bool
+    - single_choice: bool
         True for single-answer mode (radio-button UI); False to allow multiple answers.
-    - shuffleanswers: bool
+    - shuffle: bool
         Shuffle the order of answers when presented.
-    - answernumbering: AnsNumbering
+    - labels: AnsNumbering
         One of 'abc' | 'ABCD' | '123' | 'iii' | 'III' | 'none'.
     - combined: CombinedFeedback
         Optional combined feedback shown after answering.
@@ -44,9 +44,9 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     """
 
     answers: List[TextAnswer] = field(default_factory=list)
-    single: bool = False
-    shuffleanswers: bool = True
-    answernumbering: AnsNumbering = "abc"
+    single_choice: bool = False
+    shuffle: bool = True
+    labels: AnsNumbering = "none"
 
     qtype: str = "multichoice"
 
@@ -55,7 +55,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         super().validate()
         if not self.answers:
             raise ValueError("MultiChoice requires at least one <answer>.")
-        if self.single:
+        if self.single_choice:
             # must have at least one 100% answer
             if not any(abs(float(a.fraction) - 100.0) <= 1e-6 for a in self.answers):
                 raise ValueError("Single-choice needs one answer with fraction=100.")
@@ -75,11 +75,11 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
             )
 
     # Fluent set_* wrappers (aliases)
-    def set_numbering(self, scheme: AnsNumbering) -> Self:
-        self.answernumbering = scheme
+    def set_labels(self, scheme: AnsNumbering) -> Self:
+        self.labels = scheme
         return self
 
-    def set_single(self, on: bool = True) -> Self:
+    def set_single_choice(self, on: bool = True) -> Self:
         """Toggle single-answer (radio-button) mode.
 
         This affects UI presentation and validation rules:
@@ -89,7 +89,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
           partial credit single-choice questions.
         - When False, multiple answers can be selected (checkbox UI).
         """
-        self.single = bool(on)
+        self.single_choice = bool(on)
         return self
 
     # Quickstart-friendly add_answer: accept a string or a TextAnswer
@@ -113,6 +113,21 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         else:
             raise TypeError("MultiChoice.add_answer() expects a TextAnswer or a string")
         self.answers.append(ta)
+        return self
+
+    def set_choice_layout(
+        self,
+        *,
+        labels: Optional[AnsNumbering] = None,
+        shuffle: Optional[bool] = None,
+        single_choice: Optional[bool] = None,
+    ) -> Self:
+        if labels is not None:
+            self.labels = labels
+        if shuffle is not None:
+            self.shuffle = bool(shuffle)
+        if single_choice is not None:
+            self.single_choice = bool(single_choice)
         return self
 
     # Verbose new API for manipulating choices
@@ -229,7 +244,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
 
     def set_shuffle(self, on: bool = True) -> Self:
         """Enable/disable shuffling of answers."""
-        self.shuffleanswers = on
+        self.shuffle = bool(on)
         return self
 
     def set_answers(self, *answers: TextAnswer) -> Self:

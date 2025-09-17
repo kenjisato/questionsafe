@@ -2,6 +2,7 @@
 <question type="numerical">
   {{ mx.name_and_stem(n) }}
   {{ mx.defaultgrade_penalty(n) }}
+  {{ mx.general_feedback_block(n) }}
   {{ mx.answer_value_block(n.answers) }}
   {%- if n.units %}
   <units>

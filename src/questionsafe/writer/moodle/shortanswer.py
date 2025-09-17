@@ -22,7 +22,7 @@ def _(q: ShortAnswer):
     d.update(
         {
             "type": "shortanswer",
-            "usecase": q.usecase,
+            "case_sensitive": bool(getattr(q, "case_sensitive", False)),
             "answers": answers,
         }
     )

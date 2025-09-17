@@ -297,10 +297,10 @@ class Numerical(MultiTryMixin, Question[NumericalAnswer], ClozeEmbeddable):
     @ClozeEmbeddable.cloze_precheck
     def cloze(self, *, orientation: Optional[Literal["v", "h"]] = None, weight: int = 1) -> str:
         def fmt_value(val: float) -> str:
-            return str(float(val))
+            return f"{float(val):.15g}"
 
         def fmt_tol(tol: float | None) -> str:
-            return ":" + str(float(tol)) if tol is not None else ""
+            return ":" + f"{float(tol):.15g}" if tol is not None else ""
 
         parts: list[str] = []
         for a in self.answers:

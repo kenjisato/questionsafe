@@ -154,3 +154,97 @@ class Question(Generic[A]):
             f"<{self.__class__.__name__} name={self.name!r} qtype={self.qtype!r} "
             f"idnumber={self.idnumber!r}>"
         )
+
+    # ---- Semantic equality (delegating to components) ----
+    @staticmethod
+    def _round(v: float | int | None, nd: int = 7) -> float | None:
+        if v is None:
+            return None
+        try:
+            return round(float(v), nd)
+        except Exception:
+            return float(v) if v is not None else None
+
+    @staticmethod
+    def _key_textlike(v: Feedback | Text | QuestionText | str | None):
+        if v is None:
+            return None
+        if hasattr(v, "_eq_key") and callable(v._eq_key):
+            return (type(v).__name__, v._eq_key())
+        if isinstance(v, str):
+            return ("Text", (v, "html", {}))
+        # Fallback to tuple of known fields
+        return (type(v).__name__, getattr(v, "text", None), getattr(v, "format", None))
+
+    @staticmethod
+    def _key_answers(ans_list):
+        if not isinstance(ans_list, list):
+            return None
+        keys = []
+        for a in ans_list:
+            if hasattr(a, "_eq_key") and callable(a._eq_key):
+                keys.append((type(a).__name__, a._eq_key()))
+            else:
+                # Text vs Numerical fallbacks
+                if hasattr(a, "text"):
+                    keys.append((
+                        "TextAnswer",
+                        str(getattr(a, "text", "")),
+                        Question._round(getattr(a, "fraction", 0.0)),
+                        str(getattr(a, "format", "")),
+                    ))
+                elif hasattr(a, "value"):
+                    keys.append((
+                        "NumericalAnswer",
+                        Question._round(getattr(a, "value", None), 9),
+                        Question._round(getattr(a, "tolerance", None), 9),
+                        Question._round(getattr(a, "fraction", 0.0)),
+                        str(getattr(a, "format", "")),
+                    ))
+                else:
+                    keys.append(("Other", repr(a)))
+        try:
+            keys.sort()
+        except Exception:
+            pass
+        return keys
+
+    def _eq_key(self):
+        base = {
+            "qtype": str(getattr(self, "qtype", "")),
+            "name": str(getattr(self, "name", "")),
+            "questiontext": self._key_textlike(getattr(self, "questiontext", None)),
+            "feedback_general": self._key_textlike(getattr(self, "feedback_general", None)),
+            "defaultgrade": self._round(getattr(self, "defaultgrade", 1.0)),
+            "tags": tuple(sorted([str(t) for t in list(getattr(self, "tags", []) or [])])),
+            "idnumber": getattr(self, "idnumber", None),
+        }
+        # Choice-like flags
+        for attr in ("single", "shuffleanswers", "answernumbering", "usecase"):
+            if hasattr(self, attr):
+                base[attr] = getattr(self, attr)
+        # Units (dataclass equality)
+        if hasattr(self, "units"):
+            base["units"] = self.units
+        # Answers (order-insensitive)
+        base["answers"] = self._key_answers(getattr(self, "answers", None))
+        # MultiTry (only when enabled)
+        if hasattr(self, "has_hints") and bool(self.has_hints):
+            hints = []
+            for h in list(getattr(self, "hints", []) or []):
+                hints.append(self._key_textlike(h))
+            base["hints"] = tuple(hints)
+            base["penalty"] = self._round(getattr(self, "penalty", None))
+        # Combined feedback (only when enabled)
+        if hasattr(self, "has_combined_feedback") and bool(self.has_combined_feedback):
+            base["feedback_combined"] = (
+                self._key_textlike(getattr(self, "feedback_correct", None)),
+                self._key_textlike(getattr(self, "feedback_partiallycorrect", None)),
+                self._key_textlike(getattr(self, "feedback_incorrect", None)),
+            )
+        return base
+
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        if not isinstance(other, Question):
+            return NotImplemented
+        return self._eq_key() == other._eq_key()

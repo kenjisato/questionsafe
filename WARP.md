@@ -10,7 +10,7 @@
   * `uv run path/to/script.py` not `python path/to/script.py`
   * `uv run ruff check`
   * `uv run quarto render` , etc.
-  
+* When introducing a new feature, write a failing test first. And then, implement the feature.
 
 ## Naming convention
 

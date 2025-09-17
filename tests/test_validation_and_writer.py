@@ -204,13 +204,11 @@ def test_essay_graderinfo_format() -> None:
 
 
 def test_essay_set_response() -> None:
+    from questionsafe.questions.essay import EssayTextArea, EssayAttachments
     quiz = Quiz()
     default_response = EssayResponse(
-        format="editor",
-        input_required=True,
-        input_lines=20,
-        attachments_count=1,
-        attachments_filetypelist=["pdf"],
+        textarea=EssayTextArea(format="editor", required=True, lines=20),
+        attachments=EssayAttachments(count=1, filetypelist=["pdf"]),
     )
     es = Q.Essay(name="E3", questiontext=QuestionText("essay"))
     es.set_response(default_response)

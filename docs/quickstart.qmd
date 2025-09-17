@@ -1,0 +1,24 @@
+---
+title: "Quickstart Guide"
+---
+
+Two approaches 
+
+
+## Installation
+
+**QuestionSafe** comes with command line tools, which would be good for most of the tasks. 
+
+```bash
+uvx install questionsafe
+# pipx install questionsafe
+```
+
+Advanced usage may need the [Python API](python.qmd).
+
+```bash
+uv pip install questionsafe
+# pip install questionsafe
+```
+
+

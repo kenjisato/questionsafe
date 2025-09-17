@@ -16,20 +16,22 @@ class SingleChoice(MultiChoice, ClozeEmbeddable):
 
     Semantics
     - Represents the single-answer variant of a choice question.
-    - Enforces single=True and keeps the same Moodle qtype ("multichoice").
+    - Enforces single_choice=True and keeps the same Moodle qtype ("multichoice").
     - Validation rules inherited from MultiChoice already enforce that the sum of
-      positive fractions is 100, which with single=True implies exactly one 100% answer.
+      positive fractions is 100, which with single_choice=True implies exactly one 100% answer.
 
     Caveat
     - Moodle allows multichoice with single=true to include multiple answers with
       positive fractions that sum to 100 (enabling partial credit in a radio-button UI).
       This SingleChoice class deliberately prohibits multiple positive fractions to reduce
       the chance of confusing questions. If you want radio-button input with partial credit,
-      use MultiChoice with explicit set_answers(...) and then call set_single(True).
-      Example: MultiChoice(...).set_answers(...).set_single()
+      use MultiChoice with explicit set_answers(...) and then call set_single_choice(True).
+      Example: MultiChoice(...).set_answers(...).set_single_choice()
     """
 
-    single: bool = True
+    single_choice: bool = True
+    # Disable combined feedback for SingleChoice explicitly
+    has_combined_feedback: bool = False
 
     def validate(self):
         # Run base validations (penalty checks, allowed fractions, etc.)

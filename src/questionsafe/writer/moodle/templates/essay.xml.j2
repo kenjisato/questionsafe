@@ -2,6 +2,7 @@
 <question type="essay">
   {{ mx.name_and_stem(n) }}
   {{ mx.defaultgrade_penalty(n) }}
+  {{ mx.general_feedback_block(n) }}
 
   <responseformat>{{ n.responseformat }}</responseformat>
   <responserequired>{{ 1 if n.responserequired else 0 }}</responserequired>

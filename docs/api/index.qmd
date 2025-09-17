@@ -2,8 +2,8 @@
 title: API Reference
 page-layout: article
 listing:
-  contents: .
-  sort: name
+  contents: ../reference/*
+  sort: title
   type: table
 ---
 

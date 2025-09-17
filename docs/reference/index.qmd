@@ -17,3 +17,5 @@
 | [render_html](render_html.qmd#questionsafe.render_html) |  |
 | [write_xml](write_xml.qmd#questionsafe.write_xml) |  |
 | [write_html](write_html.qmd#questionsafe.write_html) |  |
+| [list_safe_apis](list_safe_apis.qmd#questionsafe.list_safe_apis) | List (name, doc) for callables on obj marked as safe via @safe_api. |
+| [Reader](Reader.qmd#questionsafe.Reader) | Read a single question from a Markdown file with YAML front matter. |

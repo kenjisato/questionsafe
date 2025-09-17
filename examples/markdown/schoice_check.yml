@@ -1,0 +1,9 @@
+---
+type: truefalse
+name: TF/Checkbox
+choices:
+    - ( ) true
+    - (o) false
+---
+
+Body

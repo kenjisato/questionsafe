@@ -36,6 +36,21 @@ class TextAnswer(_AnswerBase):
         self.text = text
         super().__init__(fraction, format, feedback)
 
+    def _eq_key(self):
+        fb_key = None if self.feedback is None else getattr(self.feedback, "_eq_key", lambda: None)()
+        return (
+            "text",
+            self.text,
+            round(float(self.fraction), 7),
+            str(self.format),
+            fb_key,
+        )
+
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        if not isinstance(other, TextAnswer):
+            return NotImplemented
+        return self._eq_key() == other._eq_key()
+
     @classmethod
     def from_text(
         cls,
@@ -69,6 +84,22 @@ class NumericalAnswer(_AnswerBase):
 
     value: float
     tolerance: Optional[float] = None
+
+    def _eq_key(self):
+        fb_key = None if self.feedback is None else getattr(self.feedback, "_eq_key", lambda: None)()
+        return (
+            "num",
+            round(float(self.value), 15),
+            None if self.tolerance is None else round(float(self.tolerance), 15),
+            round(float(self.fraction), 7),
+            str(self.format),
+            fb_key,
+        )
+
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        if not isinstance(other, NumericalAnswer):
+            return NotImplemented
+        return self._eq_key() == other._eq_key()
 
     def __init__(
         self,

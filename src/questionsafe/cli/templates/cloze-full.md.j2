@@ -1,0 +1,18 @@
+---
+type: cloze
+name: {{ name }}
+cloze:
+  gap1: your_singlechoice.md
+  gap2:
+    - file: your_multichoice.md
+    - orientation: v
+    - weight: 1
+# Optional metadata
+# defaultgrade is not used by the cloze writer, but included here for consistency
+# defaultgrade: 1.0
+tags: []
+id: ""
+---
+
+Compose your text with embedded gaps like {% raw %}{{gap1}}{% endraw %} or {% raw %}{{gap2}}{% endraw %}.
+

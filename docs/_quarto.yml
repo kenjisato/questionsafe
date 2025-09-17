@@ -1,6 +1,6 @@
 project:
   type: website
-  title: "MoodleQuiz"
+  title: "QuestionSafe"
   output-dir: ../_site
   preview:
     port: 4200
@@ -24,22 +24,32 @@ execute:
 website:
   repo-url: https://github.com/kenjisato/questionsafe
   repo-actions: [edit, issue]
-  navbar:
-    left:
+  sidebar:
+    contents:
       - text: Home
         file: index.qmd
+      - text: Quickstart
+        file: quickstart.qmd
+      - text: Python API
+        file: python.qmd
+      - text: MetaChoice
+        file: metachoice.qmd
+      - text: Markdown Schema
+        file: markdown.qmd
       - text: Usage
         file: usage.qmd
-      - text: Fluent API
-        file: fluent-api.qmd
       - text: API Reference
         file: api/index.qmd
       - text: Changelog
         file: CHANGELOG.md
+    tools:
+      - icon: github
+        href: https://github.com/kenjisato/questionsafe
 
 quartodoc:
   package: questionsafe
   style: pkgdown
+  parser: google
 
 metadata-files:
   - _quartodoc.yml

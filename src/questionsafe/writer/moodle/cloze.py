@@ -12,7 +12,6 @@ def _(q: Cloze):
         {
             "type": "cloze",
             "stem_text": q.compile_text(),
-            "stem_format": "html",
         }
     )
     return d

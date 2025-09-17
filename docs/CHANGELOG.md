@@ -16,13 +16,19 @@
   - Provides set_correct("true"|"false", feedback=None) and set_wrong("true"|"false", feedback=None).
   - Internally uses MultiChoice add_choice_*.
   - Current semantics: subsequent calls overwrite (do not preserve previous feedback unless explicitly provided).
+- Numerical precision policy updated:
+  - Reader parses numeric answers via Decimal and quantizes to 1e-15 before converting to float.
+  - NumericalAnswer equality now rounds value and tolerance to 15 decimal places (was 9).
+  - Numerical CLOZE formatting uses 15 significant digits to avoid float tails.
 
 ### Removed
 - Legacy MultiChoice sugar methods: correct(), wrong(), choices(), choice(), as_multiple(), numbering(), shuffle(). Examples and tests now use the new API.
 
 ### Tests
 - Added tests/test_multichoice_set_choices.py to validate selective replacement behavior and uniform fraction distribution for set_choices_correct and set_choices_wrong.
+- Added tests/test_markdown_reader_numerical.py to validate YAML "0.9" equals API 0.3+0.3+0.3 under the new precision policy.
 
 ### Docs
 - README updated to document new MultiChoice and TrueFalse APIs and refined set_* semantics.
+- Python API guide documents the Numerical precision and equality policy (Decimal→1e-15→float, equality at 15 dp).
 

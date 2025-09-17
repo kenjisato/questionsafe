@@ -20,6 +20,18 @@ class Text:
     format: str = "html"
     options: Mapping[str, Any] = field(default_factory=dict)
 
+    # Semantic equality (can be overridden by subclasses via _eq_key)
+    def _eq_key(self):
+        return (self.text, self.format, dict(self.options or {}))
+
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        if not isinstance(other, Text):
+            return NotImplemented
+        # Require exact subclass match to avoid cross-type equality (e.g., Feedback vs Text)
+        if type(self) is not type(other):
+            return False
+        return self._eq_key() == other._eq_key()
+
 
 TGI = TypeVar("TGI", bound="GraderInfo")
 TH = TypeVar("TH", bound="Hint")
@@ -51,6 +63,10 @@ class Hint(Text):
 
     shownumcorrect: bool = False
     clearwrong: bool = False
+
+    def _eq_key(self):
+        base = super()._eq_key()
+        return (base, bool(self.shownumcorrect), bool(self.clearwrong))
 
     @classmethod
     def from_text(cls: Type[TH], val: Hint | Text | str) -> TH:

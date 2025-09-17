@@ -60,7 +60,7 @@ mcq = (
     )
     .add_choice_correct("Bangkok", feedback="Right!")
     .set_choices_wrong("Chiang Mai", "Phuket", "Pattaya")
-    .set_numbering("abc")
+    .set_labels("abc")
     .set_shuffle(True)
 )
 ```
@@ -72,7 +72,7 @@ API summary for `MultiChoice`
 - `set_choices_correct(*texts, feedback=None)` (uniform 100/N)
 - `set_choices_wrong(*texts, fraction=0, feedback=None)`
 - Low-level: `add_answer(answer)`, `set_answers(*answers)`
-- Other: `set_single()`, `set_numbering(scheme)`, `set_shuffle(on=True)`
+- Other: `set_single_choice()`, `set_labels(scheme)`, `set_shuffle(on=True)`, `set_choice_layout(labels=None, shuffle=None, single_choice=None)`
 
 ## ShortAnswer
 
@@ -95,6 +95,23 @@ nu = (
     Q.Numerical("NU")
     .ask("2 + 2?")
     .add_answer(4)
+)
+```
+
+## Cloze (embedded)
+
+```{python}
+from questionsafe import Q, Reader
+
+# Sub-questions read from markdown
+sc = Reader("schoice.md").read().set_name("gap1")
+mc = Reader("mchoice.md").read().set_name("gap2")
+
+clz = (
+  Q.Cloze("Japan/Cities")
+  .ask("The capital of Japan is {{gap1}}.\nChoose stations in Tokyo.\n{{gap2}}")
+  .embed_question(sc)
+  .embed_question(mc, orientation="h", weight=2)
 )
 ```
 

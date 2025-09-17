@@ -22,6 +22,9 @@ build:
         - questionsafe.questions.numerical
         - questionsafe.questions.essay
         - questionsafe.questions.description
+    - title: Meta builders
+      contents:
+        - questionsafe.meta.metachoice
     - title: Writer
       contents:
         - questionsafe.writer

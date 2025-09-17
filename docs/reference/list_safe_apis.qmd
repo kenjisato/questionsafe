@@ -1,0 +1,10 @@
+# list_safe_apis { #questionsafe.list_safe_apis }
+
+```python
+list_safe_apis(obj)
+```
+
+List (name, doc) for callables on obj marked as safe via @safe_api.
+
+- If obj is a class or module, scans its attributes.
+- If obj is an instance, scans its type.

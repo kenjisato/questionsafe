@@ -1,0 +1,31 @@
+---
+type: singlechoice
+name: Japan/Capital
+defaultgrade: 2.0
+answers:
+  - text: Tokyo
+    fraction: 100
+    feedback:
+      text: "Correct!"
+      format: html
+  - text: Osaka
+    fraction: 0
+  - text: Kyoto
+    fraction: 0
+  - text: Kanagawa
+    fraction: 0
+answernumbering: abc
+shuffleanswers: true
+hints:
+  - text: "Think about the most populous city."
+    format: markdown
+hint_penalty: 0.5
+feedback:
+  general:
+    text: "A classic geography question."
+    format: html
+tags: [Japan, Capital]
+id: jp-capital-001
+---
+
+What is the capital of Japan?
