@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from questionsafe.meta import MetaChoice, Stem, Constraint
+from questionsafe.meta import MetaChoice, Constraint
 from questionsafe.questions.multichoice import MultiChoice
 
 
 def test_multichoice_with_prototype_defaults():
-    mc = MetaChoice().set_choices({
-        "A": "Alpha",
-        "B": "Bravo",
-        "C": "Charlie",
-    })
-    mc.add_stem(Stem("S1", "Pick B").set_choices_correct({"B"}))
+    mc = MetaChoice().set_choices({"A": "Alpha", "B": "Bravo", "C": "Charlie"})
+    mc.add_stem("S1", "Pick B", correct={"B"})
 
     proto = MultiChoice(name="TEMPLATE").set_choice_layout(labels="abc", shuffle=False)
     grp = mc.generate_multichoice(n=2, limit=1, seed=1, prototype=proto)
@@ -21,8 +17,8 @@ def test_multichoice_with_prototype_defaults():
 
 
 def test_singlechoice_with_prototype_defaults():
-    mc = MetaChoice().set_choices(["A", "B", "C"])  # key==text shorthand
-    mc.add_stem(Stem("S2", "Pick A").set_choices_correct({"A"}))
+    mc = MetaChoice().set_choices({"A": "A", "B": "B", "C": "C"})
+    mc.add_stem("S2", "Pick A", correct={"A"})
 
     from questionsafe.questions.singlechoice import SingleChoice
 

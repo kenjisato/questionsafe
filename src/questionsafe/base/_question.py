@@ -48,7 +48,7 @@ class Question(Generic[A]):
         Internal Moodle qtype string; set by subclasses.
     """
 
-    name: str
+    name: str = ""
     # Accept flexible input type (coerced in __post_init__), but keep strong runtime type
     # Provide a default to allow lazy initialization via set_question()/ask()
     questiontext: QuestionText | Text | str = ""
@@ -70,9 +70,12 @@ class Question(Generic[A]):
     def validate(self) -> None:
         """Base validation hook. Subclasses/mixins may extend.
 
-        Ensures that questiontext is non-empty, which is required by Moodle.
+        Ensures that name and questiontext are non-empty, which is required by Moodle.
         """
-        # Some special nodes (e.g., Category) may override this check.
+        # Validate name
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("name must not be empty")
+        # Some special nodes (e.g., Category) may override this check for questiontext.
         try:
             text = (self.questiontext.text or "").strip()  # type: ignore[attr-defined]
         except Exception:

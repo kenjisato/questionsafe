@@ -2,18 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from questionsafe.meta import MetaChoice, Stem
+from questionsafe.meta import MetaChoice
 
 
 def test_set_choices_dict_and_generate():
     mc = MetaChoice()
-    mc.set_choices({
-        "A": "Alpha long",
-        "B": "Bravo long",
-        "C": "Charlie long",
-    })
-    stem = Stem("K1", "Pick A and one more").set_choices_correct({"A"})
-    mc.add_stem(stem)
+    mc.set_choices({"A": "Alpha long", "B": "Bravo long", "C": "Charlie long"})
+    mc.add_stem("K1", "Pick A and one more", correct={"A"})
     group = mc.generate_multichoice(n=2, limit=1, seed=1)
     assert len(group.variants) == 1
     q = group.variants[0]
@@ -25,8 +20,8 @@ def test_set_choices_dict_and_generate():
 
 def test_set_choices_shorthand_strings():
     mc = MetaChoice()
-    mc.set_choices(["A: Alpha", "B"])  # B -> key==text
-    mc.add_stem(Stem("K2", "Pick B").set_choices_correct({"B"}))
+    mc.set_choices({"A": "Alpha", "B": "B"})
+    mc.add_stem("K2", "Pick B", correct={"B"})
     group = mc.generate_multichoice(n=1, limit=1, seed=2)
     q = group.variants[0]
     q.validate()
@@ -34,14 +29,10 @@ def test_set_choices_shorthand_strings():
     assert pos[0].text == "B"
 
 
-def test_set_choices_duplicate_raises():
+def test_set_choices_empty_key_raises():
     mc = MetaChoice()
     with pytest.raises(ValueError):
-        mc.set_choices(["A: one", "A: two"])  # duplicate key A
+        mc.set_choices({"": "x"})
 
 
-def test_add_choice_duplicate_raises():
-    mc = MetaChoice().set_choices({"A": "one"})
-    with pytest.raises(ValueError):
-        mc.add_choice("A: two")
 
