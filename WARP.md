@@ -2,6 +2,7 @@
 
 * Codebase optimization is prioritized over backward compatibility.
 * Never introduce code just for backward compat. Simply delete old code and rewrite tests and docs.
+* Optimization includes clarity and consiseness.
 
 ## Rules for Python Project
 
@@ -11,6 +12,8 @@
   * `uv run ruff check`
   * `uv run quarto render` , etc.
 * When introducing a new feature, write a failing test first. And then, implement the feature.
+* Use the most idiomatic style for Python as if an experienced developer wrote it.
+*
 
 ## Naming convention
 
