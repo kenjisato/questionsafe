@@ -27,6 +27,26 @@ Recommended first: everything else builds on trusting the XML we emit.
   can change between releases. Keep a compatibility note (version × round-trip result,
   with the test date) in the docs, and target at least the current LTS and the latest
   release.
+
+### Version targeting (design decision, 2026-08-19)
+
+Moodle XML changes across versions are almost always about feature availability
+(e.g., `<idnumber>` added in 3.6, `ordering` in core since 4.5), not about the XML
+structure of existing types. The plan is therefore two layers, only the first of
+which gets built up front:
+
+1. Capability table: a small `writer/moodle/_versions.py` mapping question types and
+   features to the minimum Moodle version, with notes. `validate --target 4.5` checks a
+   quiz against it, and round-trip test results (version × result × date) are recorded
+   alongside. Implement together with `validate`.
+2. Version-specific templates: `make_env` already resolves templates through a
+   ChoiceLoader, so a per-version directory (`templates/moodle-<ver>/`) can be inserted
+   into the search order later with a ~20-line change. Do not build this until the first
+   real structural difference appears.
+
+No `Edition` object or per-version writer registry; that abstraction is heavier than the
+observed differences. Start `--target` on the validate CLI, and promote it to `Quiz` only
+if needed.
 - Expand golden-file tests for the writer. Today the only golden file is
   `examples/markdown/cloze.xml`; add one per question type.
 
