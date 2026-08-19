@@ -3,108 +3,140 @@ title: "MetaChoice: Generating MultiChoice Variants"
 page-layout: article
 ---
 
-This guide explains how to generate multiple-choice questions (MCQs) from a shared pool of choices using MetaChoice. You can define global and per-stem constraints, mark correct choices by keys, and generate one or multiple combinations per stem.
+MetaChoice generates multiple-choice question variants from a shared pool of choices.
+You define the pool once, add constraints that every sampled subset must satisfy,
+and register stems (question texts) that mark which choices are correct.
+Generation then samples subsets of size `n` and materializes one question per subset.
 
 Key ideas:
-- Use Choice(key, text) to register choices with a short identifier and a long display text.
-- Group constraints operate on keys.
-- Stems have required keys and texts; you can add per-stem groups and mark correct choices.
-- Generation samples subsets of size n that satisfy all constraints; you may generate multiple variants per stem (limit).
+
+- The pool maps a short key to a display text: `{"T1": "President T1 ..."}`.
+- Constraints operate on keys and bound how many members of a group may appear in a subset.
+- Each stem marks its correct choices by key; correctness is stored as a reserved
+  constraint group with id `"__correct__"`.
+- `generate_multichoice` / `generate_singlechoice` return a `QuestionGroup`,
+  ready for `Quiz.add_group`.
 
 ## Quick start
 
 ```{python}
 #| echo: true
-from questionsafe.meta import MetaChoice, Stem, Choice, Constraint
+from questionsafe.meta import MetaChoice, Constraint
+from questionsafe import Quiz, Text
 
-mc = (
-    MetaChoice()
-    .set_choices([
-        Choice("T1", "President T1"),
-        Choice("T2", "President T2"),
-        Choice("P1", "Policy P1"),
-        Choice("P2", "Policy P2"),
-        Choice("A1", "Attractor A1"),
-    ])
-    .add_constraint(Constraint("term", choices={"T1", "T2"}, min=1, max=1))
-    .add_constraint(Constraint("policy", choices={"P1", "P2"}, min=0, max=1))
+mc = MetaChoice()
+
+# The pool: key -> Text | str
+mc.set_choices({
+    "T1": Text("President T1 (*long* description...)", format="markdown"),
+    "T2": "President T2 (long description...)",
+    "P1": "Policy P1 (long description...)",
+    "P2": "Policy P2 (long description...)",
+    "A1": "Attractor A1 (long description...)",
+})
+
+# Global constraints apply to every stem.
+mc.set_constraints({
+    "term": Constraint("T1", "T2", min=1, max=1),
+})
+mc.add_constraint("P1", "P2", max=1)  # id is optional
+
+# Stems: key, text, correct keys, and optional per-stem constraints.
+mc.add_stem(
+    "TERM_Q",
+    "Who served two terms?",
+    correct={"T1", "T2"},
+)
+mc.add_stem(
+    "TERM_POLICY_Q",
+    "Pick a term and a policy",
+    correct=("T1", "T2"),
+    constraints={"policy": Constraint("P1", "P2", min=1, max=1)},
 )
 
-mc.add_stem(Stem("TERM_Q", "Who served two terms?").set_choices_correct({"T1", "T2"}))
-mc.add_stem(Stem("TERM_POLICY_Q", "Pick a term and a policy").set_choices_correct({"T1", "T2"}).add_constraint(Constraint("policy", choices={"P1","P2"}, min=1, max=1)))
-
 group = mc.generate_multichoice(n=3, limit=2, seed=42)
-# Combine with a Quiz
-from questionsafe.quiz import Quiz
-Quiz(category="Demo").add_group(group)
-# Peek at first two variants
-group.variants[0], group.variants[1]
+qz = Quiz(category="Demo").add_group(group)
+qz.info()
 ```
 
-## Shorthand inputs for choices
+## The choice pool
 
-Preferred: Choice objects. Shorthand coercions are supported for convenience:
+`set_choices` replaces the whole pool and accepts only a `Mapping[str, Text | str]`.
+Keys must be non-empty and unique; duplicates raise `ValueError`.
+There is no `add_choice`/`add_choices`; build the mapping and set it once.
 
-- Dict mapping: {"id": "long text", ...}
-- Strings with a colon: "id: long text" (first colon splits). If no colon, the same string is used as both key and text.
+Keys decouple stable identifiers from long display texts. Constraints and correctness
+always refer to keys, and the sampler never touches the texts.
 
-```{python}
-#| echo: true
-from questionsafe.meta import MetaChoice
-mc = MetaChoice()
-mc.set_choices({"X": "Long X", "Y": "Long Y"})
-mc.add_choices(["Z: Long Z", "W"])  # W -> key==text
-list(mc._choices.keys())
+## Constraints
+
+A `Constraint` bounds how many of its members may appear in a sampled subset:
+
+```python
+Constraint("T1", "T2", min=1, max=1)   # exactly one of T1/T2
+Constraint("P1", "P2", max=1)          # at most one of P1/P2
+Constraint("A1", "A2", "A3", min=1)    # at least one of A1/A2/A3
 ```
 
-Duplicate keys raise ValueError in set_choices/add_choices/add_choice.
+Register them globally with `set_constraints({"id": Constraint(...)})`
+(the mapping key becomes the constraint id) or `add_constraint(*members, min=..., max=..., id=None)`.
+Per-stem constraints go in the `constraints=` mapping of `add_stem` and apply on top of
+the global ones. All members must exist in the pool; unknown keys raise `ValueError`.
+
+The id `"__correct__"` is reserved for correctness; use the `correct=` argument instead
+of defining it yourself.
 
 ## Stems and correctness
 
-Define per-stem constraints and correct groups by keys. Correctness is just another group—MetaChoice uses an internal reserved id ("__correct__").
+`add_stem(key, text, *, correct, constraints={})` registers a stem and returns the
+underlying `Stem` object. `correct` is an iterable of pool keys; internally it becomes
+a constraint group requiring at least one correct choice in every sampled subset.
 
-```{python}
-#| echo: true
-from questionsafe.meta import MetaChoice, Stem, Choice, Constraint
-mc = MetaChoice().set_choices(["A", "B", "C"])  # shorthand key==text
-s = Stem("S1", "Pick A and one more").set_group_correct({"A"})
-mc.add_stem(s)
-group = mc.generate_multichoice(n=2, limit=1, seed=1)
-[a.text for a in group.variants[0].answers]
-```
+Every generated question assigns uniform fractions to the correct choices it contains:
+with k correct in a subset, each gets 100/k, and wrong choices get 0.
 
 ## Generation controls
 
-- n: number of choices per generated MCQ, uniform across stems.
-- limit: maximum number of distinct combinations per stem; total MCQs <= (#stems × limit), capped by feasibility.
-- seed: base seed; per-stem seeds are derived deterministically (seed + index).
-- randomize_order / randomize_branch: control randomness in the sampler.
+- `n`: number of choices per generated question, uniform across stems.
+- `limit`: maximum number of distinct combinations per stem;
+  total questions ≤ #stems × limit, capped by feasibility.
+  If no feasible subset exists, generation raises `ValueError`.
+- `seed`: base seed; per-stem seeds are derived deterministically (seed + stem index).
+- `randomize_order` / `randomize_branch`: control randomness inside the subset sampler.
+- `nc` (multichoice only): number of correct choices per subset, either an int
+  (exactly that many) or a `(min, max)` tuple. `None` keeps the bounds of the
+  correct group.
 
-Answers are always listed in the registered pool order for stability.
+`generate_singlechoice` tightens the correct group to exactly one correct choice per
+subset and emits `SingleChoice` questions; a stem whose correct group demands more than
+one correct raises `ValueError`.
+
+Answers are always listed in the registered pool order for stability
+(shuffling is Moodle's job; see the prototype below).
 
 ## Using a prototype question for defaults
 
-You can pass a prototype MultiChoice or SingleChoice to control defaults like shuffle, labels, combined feedback, etc. The generator deep-copies the prototype per variant and replaces only name, question text, and answers.
+Pass a prototype `MultiChoice` or `SingleChoice` to set defaults such as labels, shuffle,
+or combined feedback. The generator deep-copies the prototype per variant and replaces
+only the name, question text, and answers.
 
 ```{python}
 #| echo: true
-from questionsafe.meta import MetaChoice, Stem, Choice, Constraint
-from questionsafe.questions.multichoice import MultiChoice
+from questionsafe import Q
 
-proto = MultiChoice(name="TEMPLATE").set_choice_layout(labels="abc", shuffle=False)
-mc = (
-    MetaChoice()
-    .set_choices([Choice("A","Alpha"), Choice("B","Bravo"), Choice("C","Charlie")])
-)
-mc.add_stem(Stem("S_PROTO", "Pick B").set_choices_correct({"B"}))
-# Each generated MCQ inherits labels/shuffle from the prototype
-grp = mc.generate_multichoice(n=2, limit=1, seed=7, prototype=proto)
+proto = Q.MultiChoice().set_choice_layout(labels="abc", shuffle=False)
+grp = mc.generate_multichoice(n=3, limit=1, seed=7, prototype=proto)
 (grp.variants[0].labels, grp.variants[0].shuffle)
 ```
 
-## Design notes
+## From group to Moodle
 
-- Choice keys decouple identifiers from long texts, allowing stable grouping and constraints.
-- All groups operate on keys; the sampler never touches raw text—only keys.
-- MultiChoice answers are materialized from keys by looking up the registered Choice text; uniform fractions (100/k) are assigned to the k correct items in each variant.
+`Quiz.add_group` puts each group under its own subcategory and assigns idnumbers,
+so on the Moodle side you can point a random question at the subcategory and let
+Moodle pick a variant per attempt:
 
+```{python}
+#| echo: true
+xml = qz.to_xml()          # bytes; or qz.to_xml("quiz.xml") to write a file
+print(xml.decode("utf-8")[:400])
+```
