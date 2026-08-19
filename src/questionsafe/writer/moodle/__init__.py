@@ -12,5 +12,6 @@ from . import description as _description  # noqa: F401  # pyright: ignore[repor
 from . import cloze as _cloze  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
 from ._build import render_xml, render_html, write_xml, write_html
+from ._versions import parse_version, check_target
 
-__all__ = ["render_xml", "render_html", "write_xml", "write_html"]
+__all__ = ["render_xml", "render_html", "write_xml", "write_html", "parse_version", "check_target"]
