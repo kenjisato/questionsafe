@@ -98,7 +98,23 @@ B,1,unit2/q3.md,2
 
 Output is a textual report including coverage by group, uncovered objectives, and a per-objective list of covering questions.
 
-### questionsafe build, validate, preview
+### questionsafe validate
+
+Validate Markdown questions without importing them into Moodle.
+
+```bash
+questionsafe validate                      # project questions directory
+questionsafe validate questions/unit1/     # a directory (recursive *.md)
+questionsafe validate q1.md q2.md          # specific files
+questionsafe validate --target 4.5 ...     # also flag version-gated features
+```
+
+For each file, the command parses the question, runs the model validation rules,
+renders it to Moodle XML, and checks the XML is well-formed. With `--target MAJOR.MINOR`,
+it additionally flags features the target Moodle version does not understand
+(e.g., `idnumber` requires Moodle 3.6 or later). Exits non-zero if any file fails.
+
+### questionsafe build, preview
 
 Reserved for future features.
 

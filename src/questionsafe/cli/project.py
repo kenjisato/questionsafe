@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Any, Optional
 
 import typer
 from ._common import console
@@ -188,8 +188,83 @@ def add_project_commands(app: typer.Typer) -> None:
         raise NotImplementedError
 
     @app.command()
-    def validate():
-        raise NotImplementedError
+    def validate(
+        paths: Annotated[
+            Optional[list[str]],
+            typer.Argument(
+                help="Markdown question files or directories (searched recursively for *.md). "
+                "Defaults to the project questions directory from questionsafe.yml.",
+            ),
+        ] = None,
+        target: Optional[str] = typer.Option(
+            None,
+            "--target",
+            help="Target Moodle version like '4.5'; flags version-gated features.",
+        ),
+        templates_dir: Optional[str] = typer.Option(
+            None, "--templates-dir", help="Custom templates directory (optional)"
+        ),
+    ):
+        """Validate questions: model rules, XML well-formedness, optional version check."""
+        from lxml import etree
+
+        from ..writer.moodle import check_target, parse_version
+
+        if target is not None:
+            try:
+                parse_version(target)
+            except ValueError as e:
+                raise typer.BadParameter(str(e)) from None
+
+        # Collect files
+        files: list[Path] = []
+        if paths:
+            for raw in paths:
+                p = Path(raw)
+                if p.is_dir():
+                    files.extend(sorted(p.rglob("*.md")))
+                elif p.is_file():
+                    files.append(p)
+                else:
+                    console.print(f"[red]Path not found: {p}[/red]", soft_wrap=True)
+                    raise typer.Exit(1)
+        else:
+            qroot = questions_root_from_config(Path.cwd())
+            if qroot is None or not qroot.is_dir():
+                console.print(
+                    "[red]No paths given and no questions directory configured "
+                    "(questionsafe.yml: project.questions).[/red]",
+                    soft_wrap=True,
+                )
+                raise typer.Exit(1)
+            files = sorted(qroot.rglob("*.md"))
+
+        errors = 0
+        parsed: list[tuple[Path, Any]] = []
+        for f in files:
+            try:
+                q = Reader(f).read(validate=True)
+                etree.fromstring(render_xml([q], templates_dir=templates_dir))
+            except Exception as e:
+                errors += 1
+                console.print(f"[red]ERROR[/red] {f}: {e}", soft_wrap=True)
+                continue
+            parsed.append((f, q))
+            console.print(f"[green]OK[/green] {f}", soft_wrap=True)
+
+        if target is not None:
+            for f, q in parsed:
+                for msg in check_target([q], target):
+                    errors += 1
+                    console.print(f"[red]TARGET[/red] {f}: {msg}", soft_wrap=True)
+
+        n = len(files)
+        console.print(
+            f"{n} file{'s' if n != 1 else ''} checked, {errors} error{'s' if errors != 1 else ''}",
+            soft_wrap=True,
+        )
+        if errors:
+            raise typer.Exit(1)
 
     @app.command()
     def preview():

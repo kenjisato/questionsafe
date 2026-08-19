@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+- `questionsafe validate [PATHS]... [--target MAJOR.MINOR]`: parses each Markdown
+  question, runs model validation, renders it to Moodle XML and checks well-formedness
+  (lxml), and optionally flags features the target Moodle version does not understand.
+- Moodle version capability table (`writer/moodle/_versions.py`) with `parse_version`
+  and `check_target`; the first version-gated entry is `idnumber` (Moodle 3.6+),
+  verified against Moodle's `format.php` on stable branches.
+
 ### Fixed
 - Reader.read(validate=True) now actually validates every question type; previously all
   types except cloze returned before the validation step. Cloze-embedded fragment files

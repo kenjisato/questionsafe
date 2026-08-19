@@ -136,13 +136,14 @@ There is no schema validation of the output; correctness relies on templates plu
 - `questionsafe init [DIR]` — scaffold `questions/`, `templates/`, `questionsafe.yml`
 - `questionsafe create [PATH] --type ...` — new question file from a template (interactive fallback)
 - `questionsafe render FILE [--out] [--templates-dir]` — Markdown to XML
+- `questionsafe validate [PATHS]... [--target MAJOR.MINOR]` — model rules + XML
+  well-formedness + version-gated feature check (see `writer/moodle/_versions.py`)
 - `questionsafe course init|coverage|checkout|list|objectives|questions` — CSV-based course tools
-- `build`, `validate`, `preview` — reserved stubs (`NotImplementedError`)
+- `build`, `preview` — reserved stubs (`NotImplementedError`)
 
 ## Known gaps
 
 - `questions/gapselect.py` is an empty placeholder.
-- CLI `build`/`validate`/`preview` are unimplemented.
-- `Reader.read(validate=...)` only takes effect for cloze; other types return before the check.
+- CLI `build`/`preview` are unimplemented.
 - Only golden-file test for writer output is `examples/markdown/cloze.xml`.
 - `Quiz.lms` supports `"moodle"` only.

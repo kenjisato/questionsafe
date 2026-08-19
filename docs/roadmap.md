@@ -7,13 +7,9 @@ new question types, and course operation. Written 2026-08-19 against commit `7b4
 
 Recommended first: everything else builds on trusting the XML we emit.
 
-- Implement `questionsafe validate` (currently a `NotImplementedError` stub in `cli/project.py`).
-  Two layers:
-  1. Model validation: run `Question.validate()` across a file, directory, or project.
-     This includes fixing a latent bug: `Reader.read(validate=...)` returns early for every
-     type except cloze, so the flag is dead for 7 of 8 types (`importers/markdown.py`).
-  2. XML well-formedness: parse the rendered output with lxml (declared as a dependency
-     but currently unused).
+- Done (2026-08-19): `questionsafe validate [PATHS]... [--target MAJOR.MINOR]` — model
+  validation, XML well-formedness via lxml, and version-gated feature checks against the
+  capability table. The dead `Reader.read(validate=...)` flag is fixed along the way.
 - Moodle publishes no official XSD for the XML format, so schema validation cannot be the
   strategy. Instead, treat Moodle's importer as the oracle:
   - Compare our output against Moodle's own fixture XML
@@ -35,10 +31,10 @@ Moodle XML changes across versions are almost always about feature availability
 structure of existing types. The plan is therefore two layers, only the first of
 which gets built up front:
 
-1. Capability table: a small `writer/moodle/_versions.py` mapping question types and
-   features to the minimum Moodle version, with notes. `validate --target 4.5` checks a
-   quiz against it, and round-trip test results (version × result × date) are recorded
-   alongside. Implement together with `validate`.
+1. Capability table (done 2026-08-19): `writer/moodle/_versions.py` maps question types
+   and features to the minimum Moodle version; `validate --target 4.5` checks against it.
+   Round-trip test results (version × result × date) should be recorded alongside as
+   they are produced.
 2. Version-specific templates: `make_env` already resolves templates through a
    ChoiceLoader, so a per-version directory (`templates/moodle-<ver>/`) can be inserted
    into the search order later with a ~20-line change. Do not build this until the first
