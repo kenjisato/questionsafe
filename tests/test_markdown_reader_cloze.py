@@ -69,8 +69,9 @@ def test_reader_cloze_with_embedded_files(tmp_path):
 
     q_yaml = Reader(cloze_path).read()
 
-    gap1 = Reader(tmp_path / "schoice.md").read().set_name("gap1")
-    gap2 = Reader(tmp_path / "mchoice.md").read().set_name("gap2")
+    # Embedded fragments are not standalone-valid (empty questiontext), so skip validation
+    gap1 = Reader(tmp_path / "schoice.md").read(validate=False).set_name("gap1")
+    gap2 = Reader(tmp_path / "mchoice.md").read(validate=False).set_name("gap2")
     q_py = (
         Q.Cloze("Japan/Cities")
         .ask("The capital of Japan is {{ gap1 }}. \nChoose stations in Tokyo.\n{{  gap2  }}")

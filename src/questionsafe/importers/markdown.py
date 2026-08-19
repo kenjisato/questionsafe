@@ -299,30 +299,28 @@ class Reader:
         if not qtype:
             raise ValueError("front matter must include 'type'")
 
+        q: Question[Any]
         if qtype in {"singlechoice", "single", "sc"}:
-            return self._build_singlechoice(meta, body)
-        if qtype in {"truefalse", "tf"}:
-            return self._build_truefalse(meta, body)
-        if qtype in {"multichoice", "multiple", "multi", "mc"}:
-            return self._build_multichoice(meta, body)
-        if qtype in {"numerical", "num"}:
-            return self._build_numerical(meta, body)
-        if qtype in {"shortanswer", "short", "sa"}:
-            return self._build_shortanswer(meta, body)
-        if qtype in {"essay"}:
-            return self._build_essay(meta, body)
-        if qtype in {"description", "desc"}:
-            return self._build_description(meta, body)
-        if qtype in {"cloze"}:
+            q = self._build_singlechoice(meta, body)
+        elif qtype in {"truefalse", "tf"}:
+            q = self._build_truefalse(meta, body)
+        elif qtype in {"multichoice", "multiple", "multi", "mc"}:
+            q = self._build_multichoice(meta, body)
+        elif qtype in {"numerical", "num"}:
+            q = self._build_numerical(meta, body)
+        elif qtype in {"shortanswer", "short", "sa"}:
+            q = self._build_shortanswer(meta, body)
+        elif qtype in {"essay"}:
+            q = self._build_essay(meta, body)
+        elif qtype in {"description", "desc"}:
+            q = self._build_description(meta, body)
+        elif qtype in {"cloze"}:
             q = self._build_cloze(meta, body)
         else:
             raise NotImplementedError(f"Unsupported question type: {qtype}")
 
         if validate:
-            try:
-                q.validate()  # type: ignore[attr-defined]
-            except AttributeError:
-                pass
+            q.validate()
         return q
 
     # --- Builders (designed to mirror model signatures as we expand) ---
@@ -615,7 +613,9 @@ class Reader:
                     continue
                 f_str = _expand_with_vars(str(f), getattr(self, "_project_vars", {}))
                 path = _resolve_path(str(f_str))
-                sub = Reader(path).read()
+                # Embedded fragments need not satisfy standalone-question rules
+                # (e.g., empty questiontext); embed_question prechecks what matters.
+                sub = Reader(path).read(validate=False)
                 # Use provided name as identifier
                 sub.set_name(str(ident))
                 orientation = opts.get("orientation")
@@ -639,15 +639,15 @@ class Reader:
             raise ValueError("Provide either 'answers' or shorthand 'answer', not both, for numerical")
 
         PREC = Decimal("1e-15")
-        # Full-form list of answers
+        # Full-form list of answers; the numeric value key is 'answer' (matches docs,
+        # authoring templates, and Numerical.add_answer's parameter name)
         if isinstance(answers_meta, list) and answers_meta:
             for item in answers_meta:
                 if not isinstance(item, dict):
                     continue
-                if "value" not in item:
-                    continue
-                # Coerce value & tolerance as Decimal -> quantize(1e-15) -> float
-                val = float(Decimal(str(item.get("value"))).quantize(PREC, rounding=ROUND_HALF_EVEN))
+                if "answer" not in item:
+                    raise ValueError("Each item in 'answers' must have an 'answer' key for numerical")
+                val = float(Decimal(str(item.get("answer"))).quantize(PREC, rounding=ROUND_HALF_EVEN))
                 tol_raw = item.get("tolerance", None)
                 tol: float | None
                 if tol_raw is None:
@@ -657,26 +657,15 @@ class Reader:
                 fr = float(item.get("fraction", 100.0))
                 fb = item.get("feedback", None)
                 q.add_answer(val, tolerance=tol, fraction=fr, feedback=fb)
-        # Shorthand 'answer' (only one answer allowed): force fraction=100
+        # Shorthand 'answer': a single scalar with fraction=100; tolerance/feedback
+        # require the full-form 'answers' list
         elif single_meta is not None and answers_meta is None:
-            # Scalar form
-            if not isinstance(single_meta, dict):
-                val = float(Decimal(str(single_meta)).quantize(PREC, rounding=ROUND_HALF_EVEN))
-                q.add_answer(val, fraction=100.0)
-            else:
-                if "value" not in single_meta:
-                    return q
-                val = float(Decimal(str(single_meta.get("value"))).quantize(PREC, rounding=ROUND_HALF_EVEN))
-                tol_raw = single_meta.get("tolerance", None)
-                tol: float | None
-                if tol_raw is None:
-                    tol = None
-                else:
-                    tol = float(Decimal(str(tol_raw)).quantize(PREC, rounding=ROUND_HALF_EVEN))
-                # Force fraction to 100 regardless of provided value
-                fr = 100.0
-                fb = single_meta.get("feedback", None)
-                q.add_answer(val, tolerance=tol, fraction=fr, feedback=fb)
+            if isinstance(single_meta, dict):
+                raise ValueError(
+                    "Shorthand 'answer' must be a scalar; use 'answers' for tolerance/feedback"
+                )
+            val = float(Decimal(str(single_meta)).quantize(PREC, rounding=ROUND_HALF_EVEN))
+            q.add_answer(val, fraction=100.0)
 
         return q
 

@@ -19,7 +19,7 @@ def test_numerical_reader_matches_api_sum(tmp_path):
         type: numerical
         name: N/Exact
         answers:
-          - value: "0.9"
+          - answer: "0.9"
             tolerance: 0
         ---
 

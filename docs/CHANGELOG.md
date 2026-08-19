@@ -2,7 +2,19 @@
 
 ## Unreleased
 
+### Fixed
+- Reader.read(validate=True) now actually validates every question type; previously all
+  types except cloze returned before the validation step. Cloze-embedded fragment files
+  are read with validate=False, since fragments need not be standalone-valid.
+
 ### Changed
+- Numerical Markdown schema: the numeric value key in full-form `answers` items is
+  `answer` (matching the documented schema, authoring templates, and
+  `Numerical.add_answer`); the reader previously required an undocumented `value` key,
+  which silently produced questions with no answers.
+- The numerical shorthand `answer:` accepts only a scalar; the undocumented mapping form
+  (`answer: {value, tolerance, feedback}`) now raises ValueError. Use full-form `answers`
+  for tolerance/feedback.
 - MultiChoice API overhauled for clarity and EAFP-friendly usage:
   - Added verbose methods:
     - add_choice_correct(text, feedback=None) — appends a 100% correct choice

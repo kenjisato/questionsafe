@@ -30,9 +30,10 @@ def test_numerical_shorthand_scalar(tmp_path):
     assert q_yaml == q_api
 
 
-def test_numerical_shorthand_mapping_with_tolerance(tmp_path):
-    # answer: { value: 0.9, tolerance: 0 }
-    from questionsafe import Reader, Q, Text
+def test_numerical_shorthand_mapping_rejected(tmp_path):
+    # The shorthand accepts only a scalar; tolerance/feedback need full-form 'answers'.
+    import pytest
+    from questionsafe import Reader
 
     p = _write(
         tmp_path,
@@ -49,32 +50,6 @@ def test_numerical_shorthand_mapping_with_tolerance(tmp_path):
         """,
     )
 
-    q_yaml = Reader(p).read()
-    q_api = Q.Numerical("N/WithTol").ask(Text("Any text", format="markdown")).add_answer(0.9, tolerance=0)
-    assert q_yaml == q_api
-
-
-def test_numerical_shorthand_with_feedback(tmp_path):
-    # answer: { value: 0.9, tolerance: 0, feedback: correct }
-    from questionsafe import Reader, Q, Text
-
-    p = _write(
-        tmp_path,
-        """
-        ---
-        type: numerical
-        name: N/WithFB
-        answer:
-          value: 0.9
-          tolerance: 0
-          feedback: correct
-        ---
-
-        Any text
-        """,
-    )
-
-    q_yaml = Reader(p).read()
-    q_api = Q.Numerical("N/WithFB").ask(Text("Any text", format="markdown")).add_answer(0.9, tolerance=0, feedback="correct")
-    assert q_yaml == q_api
+    with pytest.raises(ValueError, match="scalar"):
+        Reader(p).read()
 
