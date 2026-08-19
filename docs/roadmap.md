@@ -19,6 +19,14 @@ Recommended first: everything else builds on trusting the XML we emit.
   - Compare our output against Moodle's own fixture XML
     (`public/question/format/xml/tests/fixtures/` in moodle/moodle; see `docs/references.md`).
   - Round-trip test on a real Moodle instance: import our XML, export it back, diff.
+    Run the instance in a container (Docker/Podman); the official
+    [moodlehq/moodle-docker](https://github.com/moodlehq/moodle-docker) environment
+    supports selecting the Moodle branch and PHP version, so the same test can run
+    against multiple releases.
+- Record which Moodle versions questionsafe is verified against, since importer behavior
+  can change between releases. Keep a compatibility note (version × round-trip result,
+  with the test date) in the docs, and target at least the current LTS and the latest
+  release.
 - Expand golden-file tests for the writer. Today the only golden file is
   `examples/markdown/cloze.xml`; add one per question type.
 

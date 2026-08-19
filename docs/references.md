@@ -47,6 +47,9 @@ instead of guessing. All links verified on 2026-08-19.
 - [Question type plugins](https://moodledev.io/docs/5.0/apis/plugintypes/qtype) —
   how question types are implemented; useful for understanding what data a type
   actually stores. Per-type source lives at `public/question/type/<name>/` in moodle/moodle.
+- [moodle-docker](https://github.com/moodlehq/moodle-docker) —
+  Moodle HQ's official Docker environment; selectable Moodle branch and PHP version.
+  The intended platform for round-trip import/export testing across Moodle releases.
 
 ## Design reference
 
