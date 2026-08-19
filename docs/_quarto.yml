@@ -40,6 +40,12 @@ website:
         file: usage.qmd
       - text: API Reference
         file: api/index.qmd
+      - text: API Overview
+        file: api-overview.md
+      - text: References
+        file: references.md
+      - text: Roadmap
+        file: roadmap.md
       - text: Changelog
         file: CHANGELOG.md
     tools:
