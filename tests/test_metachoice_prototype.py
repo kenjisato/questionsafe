@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from questionsafe.meta import MetaChoice, Constraint
+from questionsafe.meta import MetaChoice
 from questionsafe.questions.multichoice import MultiChoice
 
 

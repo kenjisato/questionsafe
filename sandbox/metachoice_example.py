@@ -7,7 +7,7 @@ Run:
   uv run sandbox/metachoice_example.py
 """
 from __future__ import annotations
-from questionsafe.meta import MetaChoice, Stem, Constraint
+from questionsafe.meta import MetaChoice, Constraint
 from questionsafe import Q, Quiz, Text
 
 mc = MetaChoice()
