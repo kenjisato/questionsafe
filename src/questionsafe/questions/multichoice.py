@@ -67,9 +67,11 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
                 raise ValueError(
                     f"Answer fraction {a.fraction} is not a supported Moodle value."
                 )
-        # Sum of positive fractions must be exactly 100
+        # Sum of positive fractions must be 100. Moodle fractions carry five
+        # decimals, so snapped uniform splits land slightly off (e.g. three
+        # corrects: 3 x 33.33333 = 99.99999); allow that rounding headroom.
         total_positive = sum(max(0.0, float(a.fraction)) for a in self.answers)
-        if abs(total_positive - 100.0) > 1e-6:
+        if abs(total_positive - 100.0) > 1e-3:
             raise ValueError(
                 f"Sum of positive fractions must be 100; got {total_positive}"
             )
@@ -215,7 +217,14 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         if not texts:
             self.answers = keep
             return self
-        per = 100.0 / len(texts)
+        from ..base._constraints import snap_allowed_positive, uniform_fraction
+
+        per = snap_allowed_positive(uniform_fraction(len(texts)))
+        if per is None:
+            raise ValueError(
+                f"Cannot split 100% uniformly across {len(texts)} correct choices with "
+                "Moodle-supported fractions. Use set_answers() for custom distributions."
+            )
         new_correct = [
             Answer.from_text(t, fraction=per, feedback=feedback) for t in texts
         ]

@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from questionsafe.questions import MultiChoice
 from questionsafe.base import QuestionText
 from questionsafe import Answer
@@ -55,6 +57,24 @@ def test_set_choices_wrong_replaces_only_nonpositive_with_fraction():
     assert {a.text for a in neg} == {"WNEW1", "WNEW2"}
     for a in neg:
         assert a.fraction == -25.0
+
+
+def test_set_choices_correct_three_way_snaps_and_validates():
+    # Safe API contract: after a chain of safe calls, validate() passes.
+    # 100/3 must snap to Moodle's 33.33333, not stay at 33.3333333...
+    q = MultiChoice(name="MC4", questiontext=QuestionText("Q"))
+    q.set_choices_correct("C1", "C2", "C3")
+    q.set_choices_wrong("w1")
+    q.validate()
+    for a in positives(q.answers):
+        assert a.fraction == 33.33333
+
+
+def test_set_choices_correct_unsplittable_raises():
+    q = MultiChoice(name="MC5", questiontext=QuestionText("Q"))
+    # 100/11 has no Moodle-supported value to snap to
+    with pytest.raises(ValueError, match="set_answers"):
+        q.set_choices_correct(*[f"C{i}" for i in range(11)])
 
 
 def test_set_choices_correct_with_no_texts_removes_positives():
