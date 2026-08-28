@@ -85,8 +85,6 @@ implementing the calculated XML. Revisit only if per-attempt server-side generat
 ## D. Housekeeping (small, immediate)
 
 - Delete the unreachable forwarder `src/questionsafe/cli.py`; the `cli/` package shadows it.
-- Remove the duplicated `return self` in `MetaChoice.set_constraints`
-  (`meta/metachoice.py:124`).
 - Dependencies: `pydantic`, `textual`, `css-inline`, and `quarto` are declared but never
   imported; drop them or move them to the dev group (keep `lxml` if A adopts it).
   Conversely, `rich` and `PyYAML` are imported but only transitive; declare them explicitly.

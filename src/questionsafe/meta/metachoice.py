@@ -15,6 +15,7 @@ from ..base._group import QuestionGroup
 
 
 CORRECT_GROUP_ID = "__correct__"
+EXCLUDED_GROUP_ID = "__excluded__"
 
 class Constraint(BaseConstraint):
     def __init__(
@@ -43,28 +44,56 @@ class Constraint(BaseConstraint):
 @dataclass(slots=True)
 class Stem:
     key: str
-    text: str
+    text: Union[Text, str]
     local_groups: Sequence[BaseConstraint] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         if not str(self.key).strip():
             raise ValueError("Stem.key must be a non-empty string")
-        if not str(self.text).strip():
+        raw = self.text.text if isinstance(self.text, Text) else str(self.text)
+        if not raw.strip():
             raise ValueError("Stem.text must be a non-empty string")
 
-    def set_choices_correct(self, items: Iterable[Union[str, Choice]]) -> "Stem":
-        ms: Set[str] = {
-            (it.key.strip() if isinstance(it, Choice) else str(it).strip())
+    @staticmethod
+    def _normalize_keys(items: Iterable[Union[str, Choice]]) -> Set[str]:
+        keys = {
+            (it.key if isinstance(it, Choice) else str(it)).strip()
             for it in items
-            if (isinstance(it, Choice) and it.key.strip()) or (not isinstance(it, Choice) and str(it).strip())
         }
-        correct = BaseConstraint(id=CORRECT_GROUP_ID, members=ms, min=1, max=None, description=None)
-        self.local_groups = tuple(g for g in self.local_groups if g.id != CORRECT_GROUP_ID) + (correct,)
+        keys.discard("")
+        return keys
+
+    def _reserved_members(self, group_id: str) -> Set[str]:
+        for g in self.local_groups:
+            if g.id == group_id:
+                return {str(m) for m in g.members}
+        return set()
+
+    def _replace_group(self, group: BaseConstraint) -> None:
+        self.local_groups = tuple(g for g in self.local_groups if g.id != group.id) + (group,)
+
+    def set_choices_correct(self, items: Iterable[Union[str, Choice]]) -> "Stem":
+        ms = self._normalize_keys(items)
+        overlap = sorted(ms & self._reserved_members(EXCLUDED_GROUP_ID))
+        if overlap:
+            raise ValueError(f"Choices cannot be both correct and excluded for stem '{self.key}': {overlap}")
+        self._replace_group(BaseConstraint(id=CORRECT_GROUP_ID, members=frozenset(ms), min=1, max=None, description=None))
+        return self
+
+    def set_choices_excluded(self, items: Iterable[Union[str, Choice]]) -> "Stem":
+        """Mark choices that must never be sampled into this stem (min=0, max=0)."""
+        ms = self._normalize_keys(items)
+        overlap = sorted(ms & self._reserved_members(CORRECT_GROUP_ID))
+        if overlap:
+            raise ValueError(f"Choices cannot be both correct and excluded for stem '{self.key}': {overlap}")
+        self._replace_group(BaseConstraint(id=EXCLUDED_GROUP_ID, members=frozenset(ms), min=0, max=0, description=None))
         return self
 
     def add_constraint(self, constraint: BaseConstraint) -> "Stem":
         if constraint.id == CORRECT_GROUP_ID:
             raise ValueError("'__correct__' is reserved; use set_choices_correct() instead")
+        if constraint.id == EXCLUDED_GROUP_ID:
+            raise ValueError("'__excluded__' is reserved; use set_choices_excluded() instead")
         self.local_groups = tuple(self.local_groups) + (constraint,)
         return self
 
@@ -86,6 +115,8 @@ class MetaChoice:
     - Generate MultiChoice questions with generate_multichoice().
     """
 
+    name: Optional[str] = None
+    source: Optional[str] = None
     _choices: Dict[str, Choice] = field(default_factory=dict)  # key -> Choice
     _global_groups: Dict[str, BaseConstraint] = field(default_factory=dict)
     _stems: List[Stem] = field(default_factory=list)
@@ -121,11 +152,12 @@ class MetaChoice:
             cons = BaseConstraint(id=cid, members=c.members, min=c.min, max=c.max, description=None)
             self._validate_and_store_global(cons)
         return self
-        return self
 
     def _validate_and_store_global(self, constraint: BaseConstraint) -> None:
         if constraint.id == CORRECT_GROUP_ID:
             raise ValueError("'__correct__' is reserved; use Stem.set_choices_correct() instead")
+        if constraint.id == EXCLUDED_GROUP_ID:
+            raise ValueError("'__excluded__' is reserved; use add_stem(exclude=...) or Stem.set_choices_excluded() instead")
         missing: List[str] = []
         for m in constraint.members:
             key = str(m).strip()
@@ -143,15 +175,83 @@ class MetaChoice:
         return self
 
     # Stem creation
-    def add_stem(self, key: str, text: Union[Text, str], *, correct: Iterable[str], constraints: Mapping[str, "Constraint"] = {}) -> Stem:
-        """Register a stem strictly via key/text, correctness, and local constraints."""
-        stem = Stem(key=str(key), text=str(text) if not isinstance(text, Text) else text.text)
+    def add_stem(
+        self,
+        key: str,
+        text: Union[Text, str],
+        *,
+        correct: Iterable[str],
+        exclude: Iterable[str] = (),
+        constraints: Mapping[str, "Constraint"] = {},
+    ) -> Stem:
+        """Register a stem strictly via key/text, correctness, exclusions, and local constraints."""
+        k = str(key)
+        if any(s.key == k for s in self._stems):
+            raise ValueError(f"Duplicate stem key: {k}")
+        stem = Stem(key=k, text=text)
         stem.set_choices_correct(correct)
+        exclude = tuple(exclude)
+        if exclude:
+            stem.set_choices_excluded(exclude)
         for cid, c in (constraints or {}).items():
             cons = BaseConstraint(id=cid, members=c.members, min=c.min, max=c.max, description=None)
             stem.add_constraint(cons)
         self._stems.append(stem)
         return stem
+
+    # Template-level validation (no generation; n-independent checks only)
+    def validate(self) -> "MetaChoice":
+        """Validate the template: key resolution, bounds, and n-independent feasibility.
+
+        Feasibility that depends on the sample size n (a property of the exam,
+        not of the template) is still checked at generate_* time.
+        """
+        if not self._choices:
+            raise ValueError("Choice pool is empty; call set_choices() first")
+        if not self._stems:
+            raise ValueError("No stems defined; call add_stem() first")
+        for g in self._global_groups.values():
+            self._validate_constraint_bounds(g)
+        for stem in self._stems:
+            correct = self._stem_group_members(stem, CORRECT_GROUP_ID)
+            excluded = self._stem_group_members(stem, EXCLUDED_GROUP_ID)
+            if not correct:
+                raise ValueError(f"Stem '{stem.key}' has no correct choices")
+            missing = sorted(k for k in correct | excluded if k not in self._choices)
+            if missing:
+                raise ValueError(f"Stem '{stem.key}' references keys not in pool: {missing}")
+            locals_ = [g for g in stem.local_groups if g.id not in (CORRECT_GROUP_ID, EXCLUDED_GROUP_ID)]
+            for g in locals_:
+                members = sorted(str(m) for m in g.members)
+                bad = [m for m in members if m not in self._choices]
+                if bad:
+                    raise ValueError(f"Constraint '{g.id}' for stem '{stem.key}' has members not in pool: {bad}")
+                self._validate_constraint_bounds(g)
+            for g in list(self._global_groups.values()) + locals_:
+                if g.min <= 0:
+                    continue
+                available = {str(m) for m in g.members} - excluded
+                if len(available) < g.min:
+                    raise ValueError(
+                        f"Constraint '{g.id}' requires at least {g.min} of "
+                        f"{sorted(str(m) for m in g.members)} but only {len(available)} "
+                        f"remain for stem '{stem.key}' after exclusions"
+                    )
+        return self
+
+    @staticmethod
+    def _stem_group_members(stem: Stem, group_id: str) -> Set[str]:
+        for g in stem.local_groups:
+            if g.id == group_id:
+                return {str(m) for m in g.members}
+        return set()
+
+    @staticmethod
+    def _validate_constraint_bounds(g: BaseConstraint) -> None:
+        # Negative max means "relative to total" (see base Constraint); only a
+        # non-negative max can contradict min.
+        if g.max is not None and g.max >= 0 and g.min > g.max:
+            raise ValueError(f"Constraint '{g.id}': min ({g.min}) exceeds max ({g.max})")
 
     def _constraints_for_stem(self, stem: Stem) -> List[BaseConstraint]:
         groups: List[BaseConstraint] = list(self._global_groups.values()) + list(stem.local_groups)
@@ -240,9 +340,16 @@ class MetaChoice:
         k = len(correct)
         if k <= 0:
             raise RuntimeError("Invariant violated: subset must include at least one correct")
-        per = 100.0 / k
+        from ..base._constraints import snap_allowed_positive, uniform_fraction
+
+        per = snap_allowed_positive(uniform_fraction(k))
+        if per is None:
+            raise ValueError(
+                f"Stem '{stem.key}': cannot split 100% across {k} correct choices with "
+                "Moodle-supported fractions; bound the correct count with nc="
+            )
         q = deepcopy(prototype) if prototype is not None else MultiChoice(name=stem.key)
-        q.name = stem.key
+        q.name = self._variant_name(stem)
         q.set_questiontext(stem.text)
         q.answers = []
         for ck in correct:
@@ -265,7 +372,7 @@ class MetaChoice:
             raise RuntimeError("Internal error: expected exactly one correct after constraint adjustment")
         chosen = correct[0]
         q = deepcopy(prototype) if prototype is not None else SingleChoice(name=stem.key)
-        q.name = stem.key
+        q.name = self._variant_name(stem)
         q.set_questiontext(stem.text)
         q.answers = []
         q.add_answer(Answer.from_text(pool[chosen].text, fraction=100.0))
@@ -308,7 +415,10 @@ class MetaChoice:
             )
             for subset in subsets:
                 out.append(builder(stem, subset, correct_members, prototype))
-        return QuestionGroup(variants=out)
+        return QuestionGroup(variants=out, source=self.source)
+
+    def _variant_name(self, stem: Stem) -> str:
+        return f"{self.name}/{stem.key}" if self.name else stem.key
 
     def generate_multichoice(
         self,
