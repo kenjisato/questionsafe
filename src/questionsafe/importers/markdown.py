@@ -2,13 +2,18 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Tuple, Optional, TYPE_CHECKING
 
+import csv
+import io
 import os
 import re
 import frontmatter
 import warnings
 import yaml
+
+if TYPE_CHECKING:
+    from ..meta import Constraint, MetaChoice
 
 from .. import Q, Text
 from ..base._question import Question
@@ -249,6 +254,161 @@ def _merge_includes(self, meta: Dict[str, Any], *, include_warn: bool = False) -
             meta[k] = v
 
 
+# --- MetaChoice (type: metachoice) helpers -----------------------------------
+
+_MC_CSV_FENCE_OPEN = re.compile(r"^```\s*csv\s*$", re.IGNORECASE)
+_MC_FENCE_CLOSE = re.compile(r"^```\s*$")
+_MC_CONSTRAINT_KEYS = {"members", "min", "max", "apply_to"}
+
+
+def _parse_mc_text_map(meta: Dict[str, Any], key: str) -> Dict[str, Text | str]:
+    raw = meta.get(key)
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError(f"metachoice front matter must include a non-empty '{key}' mapping")
+    out: Dict[str, Text | str] = {}
+    for k, v in raw.items():
+        text = _coerce_text_like(v, default_format="markdown")
+        raw_text = text.text if isinstance(text, Text) else ("" if text is None else text)
+        if not raw_text.strip():
+            raise ValueError(f"{key} entry '{k}' has empty text")
+        out[str(k)] = text  # type: ignore[assignment]
+    return out
+
+
+def _extract_csv_fence(body: str) -> list[list[str]]:
+    """Extract the single ```csv fence from the body and parse it into rows.
+
+    Body text outside the fence is authorial commentary and is ignored.
+    """
+    blocks: list[str] = []
+    lines = body.splitlines()
+    i = 0
+    while i < len(lines):
+        if _MC_CSV_FENCE_OPEN.match(lines[i]):
+            j = i + 1
+            content: list[str] = []
+            while j < len(lines) and not _MC_FENCE_CLOSE.match(lines[j]):
+                content.append(lines[j])
+                j += 1
+            blocks.append("\n".join(content))
+            i = j + 1
+        else:
+            i += 1
+    if len(blocks) != 1:
+        raise ValueError(f"metachoice body must contain exactly one ```csv fence (found {len(blocks)})")
+    return [
+        [cell.strip() for cell in row]
+        for row in csv.reader(io.StringIO(blocks[0]))
+        if any(cell.strip() for cell in row)
+    ]
+
+
+def _parse_mc_matrix(
+    rows: list[list[str]], stem_keys: list[str], choice_keys: list[str]
+) -> Tuple[Dict[str, list[str]], Dict[str, list[str]]]:
+    """Parse the stem x choice matrix into per-stem correct and excluded key lists.
+
+    Cells: 'x' = correct, '-' = excluded (never sampled), '' = eligible distractor.
+    A pool choice absent from the matrix is an eligible distractor everywhere.
+    """
+    if not rows:
+        raise ValueError("metachoice matrix is empty")
+    header = rows[0][1:]
+    known_stems = set(stem_keys)
+    seen_cols: set[str] = set()
+    for col in header:
+        if col not in known_stems:
+            raise ValueError(f"matrix header names unknown stem '{col}' (stems: {stem_keys})")
+        if col in seen_cols:
+            raise ValueError(f"duplicate stem column '{col}' in matrix header")
+        seen_cols.add(col)
+    for s in stem_keys:
+        if s not in seen_cols:
+            raise ValueError(f"stem '{s}' is missing from the matrix header")
+
+    correct: Dict[str, list[str]] = {s: [] for s in stem_keys}
+    excluded: Dict[str, list[str]] = {s: [] for s in stem_keys}
+    pool = set(choice_keys)
+    seen_rows: set[str] = set()
+    ncols = 1 + len(header)
+    for row in rows[1:]:
+        key = row[0]
+        if key not in pool:
+            raise ValueError(f"matrix row names unknown choice key '{key}' (pool: {choice_keys})")
+        if key in seen_rows:
+            raise ValueError(f"duplicate choice row '{key}' in matrix")
+        seen_rows.add(key)
+        if len(row) != ncols:
+            raise ValueError(
+                f"matrix row '{key}' has {len(row)} cells; expected {ncols} (1 key + {len(header)} stems)"
+            )
+        for stem, cell in zip(header, row[1:]):
+            token = cell.lower()
+            if token == "x":
+                correct[stem].append(key)
+            elif token == "-":
+                excluded[stem].append(key)
+            elif token != "":
+                raise ValueError(
+                    f"invalid matrix cell '{cell}' at choice '{key}', stem '{stem}' (expected 'x', '-', or empty)"
+                )
+    for s in stem_keys:
+        if not correct[s]:
+            raise ValueError(f"stem '{s}' has no correct choices marked ('x') in the matrix")
+    return correct, excluded
+
+
+def _parse_mc_constraints(
+    meta: Dict[str, Any], choice_keys: list[str], stem_keys: list[str]
+) -> Tuple[Dict[str, "Constraint"], Dict[str, Dict[str, "Constraint"]]]:
+    """Parse front-matter constraints into a global map and per-stem local maps.
+
+    A constraint without apply_to is global; apply_to lists the stems it is
+    local to. Same shape as MetaChoice.set_constraints / add_stem(constraints=).
+    """
+    from ..meta import Constraint
+
+    raw = meta.get("constraints") or {}
+    if not isinstance(raw, dict):
+        raise ValueError("metachoice 'constraints' must be a mapping id -> {members, min, max, apply_to}")
+    global_map: Dict[str, Constraint] = {}
+    local_maps: Dict[str, Dict[str, Constraint]] = {s: {} for s in stem_keys}
+    pool = set(choice_keys)
+    for cid_raw, spec in raw.items():
+        cid = str(cid_raw)
+        if cid.startswith("__"):
+            raise ValueError(f"constraint id '{cid}' is reserved (ids starting with '__' are internal)")
+        if not isinstance(spec, dict):
+            raise ValueError(f"constraint '{cid}' must be a mapping with 'members' and optional min/max/apply_to")
+        unknown = sorted(set(spec) - _MC_CONSTRAINT_KEYS)
+        if unknown:
+            raise ValueError(f"constraint '{cid}' has unknown keys {unknown} (allowed: members, min, max, apply_to)")
+        members = [str(m) for m in (spec.get("members") or [])]
+        if not members:
+            raise ValueError(f"constraint '{cid}' must list at least one member")
+        bad = sorted(set(members) - pool)
+        if bad:
+            raise ValueError(f"constraint '{cid}' has members not in pool: {bad}")
+        cmax = spec.get("max")
+        cons = Constraint(*members, min=int(spec.get("min", 0)), max=None if cmax is None else int(cmax), id=cid)
+        if "apply_to" not in spec:
+            global_map[cid] = cons
+            continue
+        apply_to = spec.get("apply_to")
+        if isinstance(apply_to, str):
+            apply_to = [apply_to]
+        if not isinstance(apply_to, list) or not apply_to:
+            raise ValueError(
+                f"constraint '{cid}': apply_to must be a non-empty list of stem keys, or omitted for a global constraint"
+            )
+        for s_raw in apply_to:
+            s = str(s_raw)
+            if s not in local_maps:
+                raise ValueError(f"constraint '{cid}': apply_to names unknown stem '{s}'")
+            local_maps[s][cid] = cons
+    return global_map, local_maps
+
+
 @dataclass
 class Reader:
     """Read a single question from a Markdown file with YAML front matter.
@@ -275,8 +435,8 @@ class Reader:
         # Load project variables (from cwd)
         self._project_vars: Dict[str, Any] = _load_vars_from_cwd()
 
-    # --- Public API ---
-    def read(self, *, include_warn: bool = False, validate: bool = True) -> Question[Any]:
+    # --- Front matter loading (shared by read/read_metachoice/question_type) ---
+    def _load(self, *, include_warn: bool = False) -> Tuple[Dict[str, Any], str, str]:
         post = frontmatter.load(self.path)
         meta: Dict[str, Any] = dict(post.metadata or {})
         body: str = post.content or ""
@@ -289,15 +449,22 @@ class Reader:
         if isinstance(qwrap, dict):
             # Overlay with inner mapping, prefer inner keys
             # Keep merged includes at top-level unaffected
-            inner = dict(qwrap)
-            # Replace meta with inner keys overlaid on existing meta
             base = dict(meta)
-            base.update(inner)
+            base.update(dict(qwrap))
             meta = base
 
         qtype = str(meta.get("type", "")).strip().lower()
         if not qtype:
             raise ValueError("front matter must include 'type'")
+        return meta, body, qtype
+
+    # --- Public API ---
+    def question_type(self, *, include_warn: bool = False) -> str:
+        """Return the resolved 'type' of this file without building a question."""
+        return self._load(include_warn=include_warn)[2]
+
+    def read(self, *, include_warn: bool = False, validate: bool = True) -> Question[Any]:
+        meta, body, qtype = self._load(include_warn=include_warn)
 
         q: Question[Any]
         if qtype in {"singlechoice", "single", "sc"}:
@@ -316,12 +483,54 @@ class Reader:
             q = self._build_description(meta, body)
         elif qtype in {"cloze"}:
             q = self._build_cloze(meta, body)
+        elif qtype in {"metachoice"}:
+            raise ValueError(
+                "type: metachoice describes a question template, not a single question; "
+                "use Reader.read_metachoice() and generate variants with "
+                "MetaChoice.generate_multichoice()/generate_singlechoice()"
+            )
         else:
             raise NotImplementedError(f"Unsupported question type: {qtype}")
 
         if validate:
             q.validate()
         return q
+
+    def read_metachoice(self, *, include_warn: bool = False, validate: bool = True) -> "MetaChoice":
+        """Read a `type: metachoice` file and return the MetaChoice template.
+
+        The file describes the template only; generation parameters (n, limit,
+        seed, prototype) belong to the caller. With validate=True (default) the
+        template-level MetaChoice.validate() runs after assembly.
+        """
+        from ..meta import MetaChoice
+
+        meta, body, qtype = self._load(include_warn=include_warn)
+        if qtype != "metachoice":
+            raise ValueError(f"read_metachoice() requires type: metachoice; this file has type '{qtype}'")
+        name = self._require_name(meta)
+        choices = _parse_mc_text_map(meta, "choices")
+        stems = _parse_mc_text_map(meta, "stems")
+        stem_keys = list(stems.keys())
+        choice_keys = list(choices.keys())
+        rows = _extract_csv_fence(body)
+        correct, excluded = _parse_mc_matrix(rows, stem_keys, choice_keys)
+        global_map, local_maps = _parse_mc_constraints(meta, choice_keys, stem_keys)
+
+        mc = MetaChoice(name=name, source=str(self.path))
+        mc.set_choices(choices)
+        mc.set_constraints(global_map)
+        for key, text in stems.items():
+            mc.add_stem(
+                key,
+                text,
+                correct=correct[key],
+                exclude=excluded[key],
+                constraints=local_maps.get(key, {}),
+            )
+        if validate:
+            mc.validate()
+        return mc
 
     # --- Builders (designed to mirror model signatures as we expand) ---
     def _build_singlechoice(self, meta: Dict[str, Any], body: str) -> Q.SingleChoice:  # type: ignore[return-value]

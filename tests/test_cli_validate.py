@@ -45,6 +45,31 @@ Pick some.
 """
 
 
+VALID_METACHOICE = """
+---
+type: metachoice
+name: Mini/Meta
+choices:
+  C1: Correct one
+  C2: Correct two
+  D1: Wrong one
+  D2: Wrong two
+stems:
+  Q1: Pick one
+---
+
+```csv
+choice,Q1
+C1,x
+C2,x
+D1,
+D2,-
+```
+"""
+
+INVALID_METACHOICE = VALID_METACHOICE.replace("C1,x", "NOPE,x")
+
+
 def _write(dir: Path, rel: str, text: str) -> Path:
     p = dir / rel
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -74,6 +99,29 @@ def test_validate_directory_recurses_and_counts(tmp_path: Path):
     assert res.exit_code == 1
     assert "2 files" in res.output
     assert "bad.md" in res.output
+
+
+def test_validate_metachoice_template_ok(tmp_path: Path):
+    p = _write(tmp_path, "meta.md", VALID_METACHOICE)
+    res = runner.invoke(app, ["validate", str(p)])
+    assert res.exit_code == 0
+    assert "OK" in res.output
+    assert "metachoice template" in res.output
+
+
+def test_validate_metachoice_error_names_key(tmp_path: Path):
+    p = _write(tmp_path, "meta.md", INVALID_METACHOICE)
+    res = runner.invoke(app, ["validate", str(p)])
+    assert res.exit_code == 1
+    assert "NOPE" in res.output
+
+
+def test_validate_directory_mixing_metachoice_counts_both(tmp_path: Path):
+    _write(tmp_path, "a/tf.md", VALID_TF)
+    _write(tmp_path, "a/meta.md", VALID_METACHOICE)
+    res = runner.invoke(app, ["validate", str(tmp_path)])
+    assert res.exit_code == 0
+    assert "2 files" in res.output
 
 
 def test_validate_target_flags_idnumber(tmp_path: Path):

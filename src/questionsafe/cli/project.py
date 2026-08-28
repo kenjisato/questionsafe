@@ -243,7 +243,17 @@ def add_project_commands(app: typer.Typer) -> None:
         parsed: list[tuple[Path, Any]] = []
         for f in files:
             try:
-                q = Reader(f).read(validate=True)
+                reader = Reader(f)
+                if reader.question_type() == "metachoice":
+                    # Template-level checks only; XML exists after generation,
+                    # whose parameters (n, seed, ...) belong to the exam build.
+                    reader.read_metachoice(validate=True)
+                    console.print(
+                        f"[green]OK[/green] {f} [dim](metachoice template)[/dim]",
+                        soft_wrap=True,
+                    )
+                    continue
+                q = reader.read(validate=True)
                 etree.fromstring(render_xml([q], templates_dir=templates_dir))
             except Exception as e:
                 errors += 1

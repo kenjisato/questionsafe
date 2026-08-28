@@ -81,40 +81,53 @@ html_str = quiz.to_html(title=...)        # HTML preview
 
 ## MetaChoice (variant generation)
 
-Strict API as of commit `7b493ee`; runnable example in `sandbox/metachoice_example.py`.
+Runnable examples: `sandbox/metachoice_example.py` (Python API) and
+`examples/metachoice_md.py` (Markdown authoring).
 
 ```python
 from questionsafe.meta import MetaChoice, Constraint
 
-mc = MetaChoice()
+mc = MetaChoice(name="Bank/Q1")  # optional; variants are named "{name}/{stem key}"
 mc.set_choices({"A": "text a", "B": "text b", "C": "text c", "D": "text d"})  # Mapping only
 mc.add_constraint("A", "B", min=0, max=1, id="pair")     # global constraint
 mc.add_stem(
     "q1", "Which of the following ...?",
     correct=["A"],                                        # reserved "__correct__" group
+    exclude=["D"],                                        # reserved "__excluded__" group (min=0, max=0)
     constraints={"local": Constraint("C", "D", min=1)},   # per-stem constraints
 )
+mc.validate()  # template-level checks (keys, bounds, exclusion feasibility)
 group = mc.generate_multichoice(n=4, limit=3, seed=42, nc=1, prototype=None)
 group2 = mc.generate_singlechoice(n=4, limit=3, seed=42)  # forces exactly one correct
 ```
 
-- `generate_*` returns a `QuestionGroup`; feed it to `Quiz.add_group`.
+- `generate_*` returns a `QuestionGroup` (with `source` set from `MetaChoice.source`);
+  feed it to `Quiz.add_group`.
+- With k correct choices in a subset, fractions snap to the Moodle value closest to
+  100/k; unsnappable splits (e.g., k=11) raise `ValueError`.
 - `nc` fixes the number of correct choices per subset (int or `(min, max)`).
 - `prototype` is a question deep-copied per variant to carry defaults
   (shuffle, labels, combined feedback); its answers are replaced.
 - Sampling is a DFS over subsets (`base._choice_sampling.constrained_subsets`) with
   per-stem seeds derived from `seed`.
+- `Stem.set_choices_excluded(keys)` mirrors `set_choices_correct`; `add_stem(exclude=...)`
+  is the usual entry point. Correct and excluded sets must not overlap.
 
 ## Reader (Markdown import)
 
 ```python
 q = Reader("question.md").read(validate=True)
+mc = Reader("template.md").read_metachoice(validate=True)  # type: metachoice files
+Reader("question.md").question_type()                      # resolved type, no build
 ```
 
 Front-matter `type:` accepts aliases: `singlechoice|single|sc`, `truefalse|tf`,
 `multichoice|multiple|multi|mc`, `numerical|num`, `shortanswer|short|sa`, `essay`,
-`description|desc`, `cloze`. The per-type schema is documented in `markdown.qmd`;
-authoring templates live in `src/questionsafe/cli/templates/*.md.j2`.
+`description|desc`, `cloze`. `type: metachoice` is a template, not a question:
+`read()` rejects it and `read_metachoice()` returns a `MetaChoice` (schema in
+`markdown.qmd`, worked example in `examples/markdown/metachoice.md`). The per-type
+schema is documented in `markdown.qmd`; authoring templates live in
+`src/questionsafe/cli/templates/*.md.j2`.
 
 ## XML generation pipeline
 

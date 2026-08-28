@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+### Added
+- Markdown authoring format for MetaChoice (`type: metachoice`): pool, stems, and
+  constraints in front matter; correctness and per-stem exclusions in a body
+  ```csv matrix (`x` = correct, empty = eligible, `-` = never sampled).
+  Read with the new `Reader.read_metachoice()`; all key references are resolved
+  at read time with the offending key named. `Reader.question_type()` returns the
+  resolved front-matter type without building a question.
+- `MetaChoice.validate()`: template-level checks (key resolution, constraint
+  bounds, exclusion feasibility) without generating. `questionsafe validate`
+  now validates `type: metachoice` files at the template level.
+- First-class per-stem exclusions: `Stem.set_choices_excluded()` and
+  `MetaChoice.add_stem(exclude=...)` via the reserved `__excluded__` group.
+- `MetaChoice(name=..., source=...)`: variants are named `{name}/{stem key}`
+  when `name` is set, and `source` propagates to `QuestionGroup.source`.
+- Example: `examples/markdown/metachoice.md` + `examples/metachoice_md.py`
+  (three stems sharing one pool, exclusions that matter, scoped constraints).
+
+### Changed (MetaChoice / MultiChoice fractions)
+- `Stem.text` widened to `Text | str`; `add_stem` no longer flattens a `Text`
+  stem to plain text, so `format: markdown` survives to the generated question.
+- `add_stem` rejects duplicate stem keys.
+- Uniform correct fractions now snap to Moodle-supported values in both
+  `MultiChoice.set_choices_correct` and MetaChoice generation (e.g. three
+  corrects get 33.33333 each, not 100/3); unsnappable splits raise `ValueError`.
+  `MultiChoice.validate()` allows the resulting rounding headroom in the
+  positive-fraction sum (1e-3 instead of 1e-6).
+
+### Fixed
+- Duplicated `return self` in `MetaChoice.set_constraints`.
+- `MultiChoice.set_choices_correct` with three or more corrects produced
+  fractions rejected by `validate()`, violating the safe-API contract.
+
 ### Changed
 - MultiChoice API overhauled for clarity and EAFP-friendly usage:
   - Added verbose methods:

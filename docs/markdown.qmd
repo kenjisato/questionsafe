@@ -10,7 +10,8 @@ This document defines the YAML schema used in front matter for writing questions
 ## Common fields (all types)
 
 - type: string
-  - One of: singlechoice, multichoice, shortanswer, numerical, truefalse, essay, description
+  - One of: singlechoice, multichoice, shortanswer, numerical, truefalse, essay, description,
+    metachoice (a template, not a single question; read with `Reader.read_metachoice()`)
 - name: string
 - defaultgrade: float
 - tags: list[str]
@@ -277,3 +278,58 @@ id: str
 ---
 Description body
 ```
+
+## MetaChoice
+
+A `type: metachoice` file describes a variant-generation template, not a single
+question: a shared choice pool, several stems, and constraints. `Reader.read()`
+rejects it; use `Reader.read_metachoice()`, which returns a `MetaChoice`.
+Generation parameters (`n`, `limit`, `seed`, `prototype`) are not part of the
+file; they belong to the exam build that calls `generate_multichoice()` or
+`generate_singlechoice()`.
+
+````markdown
+---
+type: metachoice
+name: str                       # required; variants are named "{name}/{stem key}"
+choices:                        # required: key -> str | {text, format}
+  KEY: str | {text, format}
+stems:                          # required: key -> str | {text, format}
+  STEM: str | {text, format}
+constraints:                    # optional: id -> spec
+  some_id:
+    members: [KEY, ...]         # required, all keys must be in choices
+    min: int                    # default 0
+    max: int                    # omitted = unbounded
+    apply_to: [STEM, ...]       # omitted = global; listed = local to those stems
+---
+Free commentary (ignored by the Reader).
+
+```csv
+choice,STEM_A,STEM_B
+KEY1,x,
+KEY2,,x
+KEY3,-,
+```
+````
+
+The body must contain exactly one ```csv fence: a stem x choice matrix whose
+header row lists every stem key (first cell is a throwaway label) and whose
+rows name choice keys. Cell grammar, case-insensitive after trimming:
+
+| Cell | Meaning |
+|------|---------|
+| `x`  | correct for that stem |
+| (empty) | eligible wrong answer |
+| `-`  | never sampled into that stem (a per-stem exclusion, `min=0, max=0`) |
+
+Notes:
+- A pool choice with no matrix row is an eligible wrong answer everywhere.
+- Every stem must appear in the header and must have at least one `x`.
+- All key references are resolved at read time; a typo in a stem key, choice
+  key, constraint member, or `apply_to` entry raises `ValueError` naming it.
+- `questionsafe validate` checks metachoice files at the template level
+  (no XML is rendered, since rendering requires generation parameters).
+
+See `examples/markdown/metachoice.md` and `examples/metachoice_md.py` for a
+worked example, and the MetaChoice page for the generation API.

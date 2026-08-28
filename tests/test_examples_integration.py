@@ -34,6 +34,7 @@ def run_example(script: Path, cwd: Path | None = None) -> subprocess.CompletedPr
         ("numerical.py", ["<quiz>", '<question type="numerical">', "</quiz>"]),
         ("essay.py", ["<quiz>", '<question type="essay">', "</quiz>"]),
         ("description.py", ["<quiz>", '<question type="description">', "</quiz>"]),
+        ("metachoice_md.py", ["<quiz>", '<question type="multichoice">', "</quiz>"]),
     ],
 )
 def test_examples_emit_xml_stdout(script: str, expected_snippets: list[str]):

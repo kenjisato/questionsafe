@@ -93,7 +93,10 @@ underlying `Stem` object. `correct` is an iterable of pool keys; internally it b
 a constraint group requiring at least one correct choice in every sampled subset.
 
 Every generated question assigns uniform fractions to the correct choices it contains:
-with k correct in a subset, each gets 100/k, and wrong choices get 0.
+with k correct in a subset, each gets the Moodle-supported fraction closest to 100/k
+(50 for k=2, 33.33333 for k=3, ...), and wrong choices get 0. If 100/k has no
+Moodle-supported value to snap to (e.g., k=11), generation raises `ValueError`;
+bound the correct count with `nc=` in that case.
 
 ## Generation controls
 
@@ -128,6 +131,55 @@ proto = Q.MultiChoice().set_choice_layout(labels="abc", shuffle=False)
 grp = mc.generate_multichoice(n=3, limit=1, seed=7, prototype=proto)
 (grp.variants[0].labels, grp.variants[0].shuffle)
 ```
+
+## Authoring in Markdown
+
+A `type: metachoice` Markdown file holds the same template as the Python API above,
+so variant-generating questions live in the same question bank directory and the same
+`questionsafe validate` flow as every other question. The front matter carries the
+pool (`choices:`), the `stems:`, and the `constraints:`; the body carries a stem x
+choice matrix in a ```csv fence. Cells: `x` marks a correct choice, an empty cell an
+eligible wrong answer, and `-` bans the choice from that stem.
+
+The `-` cell covers a case the constraint syntax cannot express cleanly: a choice
+that is correct in one stem and would be defensibly correct in another, where it must
+not appear even as a wrong answer. `examples/markdown/metachoice.md` uses it twice:
+
+```{python}
+#| echo: false
+#| output: asis
+from pathlib import Path
+
+print("````markdown")
+print(Path("../examples/markdown/metachoice.md").read_text(encoding="utf-8").strip())
+print("````")
+```
+
+`Reader.read_metachoice()` parses the file, resolves every key (a typo in a stem
+key, choice key, or constraint member fails at read time, naming the offender), and
+returns a `MetaChoice`. Generation parameters stay with the caller:
+
+```{python}
+#| echo: true
+from questionsafe import Reader
+
+mc_md = Reader("../examples/markdown/metachoice.md").read_metachoice()
+grp_md = mc_md.generate_multichoice(n=4, limit=2, seed=42)
+[q.name for q in grp_md]
+```
+
+The `EXPECT` choice is correct in `DEMAND_SHIFT` and banned from `SUPPLY_SHIFT`;
+the `attractor` constraint forces the `PRICE` trap into every variant:
+
+```{python}
+#| echo: true
+for q in grp_md:
+    texts = [str(a.text) for a in q.answers]
+    print(q.name, "| EXPECT:", any("sharply" in t for t in texts),
+          "| PRICE:", any("market price" in t for t in texts))
+```
+
+The full schema is documented in [Markdown Input Schema](markdown.qmd).
 
 ## From group to Moodle
 
