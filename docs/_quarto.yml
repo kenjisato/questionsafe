@@ -42,6 +42,8 @@ website:
         file: api/index.qmd
       - text: API Overview
         file: api-overview.md
+      - text: Moodle Compatibility
+        file: moodle-compat.md
       - text: References
         file: references.md
       - text: Roadmap

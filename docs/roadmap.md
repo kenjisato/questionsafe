@@ -14,14 +14,13 @@ Recommended first: everything else builds on trusting the XML we emit.
   strategy. Instead, treat Moodle's importer as the oracle:
   - Compare our output against Moodle's own fixture XML
     (`public/question/format/xml/tests/fixtures/` in moodle/moodle; see `docs/references.md`).
-  - Round-trip test on a real Moodle instance: import our XML, export it back, diff.
-    Run the instance in a container (Docker/Podman); the official
-    [moodlehq/moodle-docker](https://github.com/moodlehq/moodle-docker) environment
-    supports selecting the Moodle branch and PHP version, so the same test can run
-    against multiple releases.
+  - Done (2026-08-29): round-trip test on a real Moodle in a Podman container —
+    `tests/test_moodle_roundtrip.py` (opt-in via `QS_MOODLE_ROUNDTRIP=1`) imports our XML
+    with `qformat_xml`, exports it back, and diffs; `scripts/moodle/moodle-rt.sh up [BRANCH]`
+    provisions any packaged release, so the same test runs against multiple versions.
 - Record which Moodle versions questionsafe is verified against, since importer behavior
-  can change between releases. Keep a compatibility note (version × round-trip result,
-  with the test date) in the docs, and target at least the current LTS and the latest
+  can change between releases: `docs/moodle-compat.md` (version × round-trip result ×
+  date; 4.5 LTS verified 2026-08-29). Target at least the current LTS and the latest
   release.
 
 ### Version targeting (design decision, 2026-08-19)

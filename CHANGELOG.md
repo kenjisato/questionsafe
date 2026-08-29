@@ -18,6 +18,12 @@
   when `name` is set, and `source` propagates to `QuestionGroup.source`.
 - Example: `examples/markdown/metachoice.md` + `examples/metachoice_md.py`
   (three stems sharing one pool, exclusions that matter, scoped constraints).
+- Round-trip test against a real Moodle in a Podman container
+  (`tests/test_moodle_roundtrip.py`, opt-in via `QS_MOODLE_ROUNDTRIP=1`;
+  stack managed by `scripts/moodle/moodle-rt.sh`, import/export driven by
+  `scripts/moodle/roundtrip.php` through Moodle's own `qformat_xml`).
+  Verified versions are recorded in `docs/moodle-compat.md` (4.5 LTS: OK,
+  2026-08-29, including the snapped 33.33333 fractions).
 
 ### Changed (MetaChoice / MultiChoice fractions)
 - `Stem.text` widened to `Text | str`; `add_stem` no longer flattens a `Text`
