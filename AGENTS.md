@@ -64,7 +64,9 @@ Current safe methods:
 
 - `MultiChoice`: `set_choices_correct`, `set_choices_wrong` (fraction must be in the allowed set),
   `add_choice_correct` (recalculates a uniform distribution and snaps to allowed fractions),
-  `add_choice_wrong` (guards the fraction to the allowed set)
+  `add_choice_wrong` (guards the fraction to the allowed set),
+  `set_scoring` (sets every wrong choice by a named R/exams rule, snapped to the allowed set;
+  also on `SingleChoice`)
 - `SingleChoice`: `set_choice_correct` (overwrites to exactly one correct=100 and removes a
   conflicting wrong duplicate), `add_choice_correct` (raises if a correct answer already exists)
 - `TrueFalse`: `set_correct_if_true`, `set_correct_if_false`.

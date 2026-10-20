@@ -1,5 +1,5 @@
 # _constraints.py
-from typing import Iterable
+from typing import Iterable, Literal, get_args
 
 # ---- Moodle Constants ----
 ALLOWED_FRACTIONS_POS = [
@@ -77,3 +77,37 @@ def closest_allowed(value: float, candidates: Iterable[float]):
             best = a
             best_diff = d
     return best
+
+
+# ---- Scoring rules for wrong choices (after R/exams' exams_eval) ----
+ScoringRule = Literal["false2", "false", "true", "all", "none"]
+SCORING_RULES: tuple[str, ...] = get_args(ScoringRule)
+
+
+def wrong_fraction(rule: str, *, n_correct: int, n_wrong: int) -> float:
+    """Fraction (in percent) for each wrong choice under a named scoring rule.
+
+    Rules follow R/exams' ``exams_eval``: each wrong choice deducts
+    1/max(n_wrong, 2) (``false2``), 1/n_wrong (``false``), 1/n_correct (``true``),
+    1 (``all``), or nothing (``none``). The result is snapped to a Moodle-supported
+    fraction; raises ValueError when none is close enough.
+    """
+    shares = {
+        "false2": lambda: 1 / max(n_wrong, 2),
+        "false": lambda: 1 / n_wrong,
+        "true": lambda: 1 / n_correct,
+        "all": lambda: 1.0,
+        "none": lambda: 0.0,
+    }
+    if rule not in shares:
+        raise ValueError(f"Unknown scoring rule {rule!r}; use one of {SCORING_RULES}")
+    share = shares[rule]()
+    if share == 0:
+        return 0.0
+    snapped = snap_allowed_positive(100 * share)
+    if snapped is None:
+        raise ValueError(
+            f"Rule {rule!r} gives -{100 * share:.5f}% per wrong choice, "
+            "which is not a supported Moodle fraction."
+        )
+    return -snapped

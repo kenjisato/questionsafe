@@ -9,6 +9,7 @@ from ..base._mixins import CombinedFeedbackMixin, MultiTryMixin
 from ..base._question import Question
 from ._cloze_embed import ClozeEmbeddable
 from ..base._safe import safe_api
+from ..base._constraints import ScoringRule, wrong_fraction
 
 
 @dataclass
@@ -249,6 +250,22 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
             Answer.from_text(t, fraction=fraction, feedback=feedback) for t in texts
         ]
         self.answers = keep + new_wrong
+        return self
+
+    @safe_api
+    def set_scoring(self, rule: ScoringRule) -> Self:
+        """Set the fraction of every wrong (fraction <= 0) choice by a named rule.
+
+        Rules follow R/exams' ``exams_eval``; see ``wrong_fraction``. Positive
+        fractions are kept. ``none`` resets wrong choices to 0.
+        """
+        wrong = [a for a in self.answers if float(a.fraction) <= 0]
+        if not wrong:
+            return self
+        n_correct = len(self.answers) - len(wrong)
+        fr = wrong_fraction(rule, n_correct=n_correct, n_wrong=len(wrong))
+        for a in wrong:
+            a.fraction = fr
         return self
 
     def set_shuffle(self, on: bool = True) -> Self:

@@ -40,14 +40,14 @@ choice types mix in `CombinedFeedbackMixin` (`set_feedback_correct/partiallycorr
 
 | Class | Moodle XML type | Notable methods |
 |---|---|---|
-| `Q.MultiChoice` | `multichoice` | `set_choices_correct/wrong`, `add_choice_correct/wrong` (safe), `set_single_choice`, `set_labels`, `set_choice_layout`, `set_shuffle`, `.cloze()` |
+| `Q.MultiChoice` | `multichoice` | `set_choices_correct/wrong`, `add_choice_correct/wrong`, `set_scoring` (safe), `set_single_choice`, `set_labels`, `set_choice_layout`, `set_shuffle`, `.cloze()` |
 | `Q.SingleChoice` | `multichoice` with `<single>true</single>` | `set_choice_correct` (safe), guarded `add_choice_correct`, `.cloze()` |
 | `Q.TrueFalse` | `truefalse` | `set_correct_if_true/false` (safe) |
 | `Q.Numerical` | `numerical` | `add_answer(answer, tolerance, ...)`, `add_units`/`set_units`, `set_unit_options`, `.cloze()` |
 | `Q.ShortAnswer` | `shortanswer` | `add_answer` (fraction defaults to 100), `set_usecase`, `.cloze()` |
 | `Q.Essay` | `essay` | ~14 setters over `EssayTextArea`/`EssayAttachments`/`EssayResponse` options |
 | `Q.Description` | `description` | display-only text |
-| `Q.Cloze` | `cloze` | `embed_question(q, orientation, weight)`, `compile_text()` |
+| `Q.Cloze` | `cloze` | `embed_question(q, orientation, weight)`, `set_scoring(rule)`, `compile_text()` |
 | `Q.Category` | `category` pseudo-question | `Category(path)`; path is normalized with `$course$/` |
 
 Safe methods and validation rules are specified in `AGENTS.md` (Safe API contract);

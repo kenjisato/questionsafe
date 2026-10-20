@@ -4,7 +4,9 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Literal
 
 from ..base import Question
+from ..base._constraints import ScoringRule
 from ._cloze_embed import ClozeEmbeddable
+from .multichoice import MultiChoice
 
 @dataclass
 class Cloze(Question):
@@ -47,6 +49,16 @@ class Cloze(Question):
         if name in self._embedded:
             raise ValueError(f"Duplicate embedded identifier: {name!r}")
         self._embedded[name] = (q, orientation, w)
+        return self
+
+    def set_scoring(self, rule: ScoringRule) -> "Cloze":
+        """Apply a named scoring rule to every embedded choice question.
+
+        See ``MultiChoice.set_scoring``. ShortAnswer and Numerical gaps are left as is.
+        """
+        for subq, _, _ in self._embedded.values():
+            if isinstance(subq, MultiChoice):
+                subq.set_scoring(rule)
         return self
 
     # Public helper for writer and users: produce inline CLOZE tokens and replace placeholders

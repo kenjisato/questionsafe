@@ -95,5 +95,5 @@ class SingleChoice(MultiChoice, ClozeEmbeddable):
                 kind = "MCH"
             else:
                 raise ValueError("Invalid orientation. Use None, 'v'|'vertical', or 'h'|'horizontal'.")
-        parts = self._tokens_for_text_answers(include_negative=False)
+        parts = self._tokens_for_text_answers(include_negative=True)
         return "{" + f"{self._fmt_weight(weight)}:{kind}:" + "~".join(parts) + "}"

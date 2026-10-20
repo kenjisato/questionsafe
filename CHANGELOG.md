@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Named scoring rules for wrong choices, after R/exams' `exams_eval`:
+  `MultiChoice.set_scoring(rule)` (also `SingleChoice`) sets every wrong choice to
+  `false2` (-1/max(n_wrong, 2)), `false`, `true`, `all`, or `none`, snapped to a
+  Moodle fraction. `Cloze.set_scoring(rule)` applies the rule to embedded choice gaps.
 - Markdown authoring format for MetaChoice (`type: metachoice`): pool, stems, and
   constraints in front matter; correctness and per-stem exclusions in a body
   ```csv matrix (`x` = correct, empty = eligible, `-` = never sampled).
@@ -36,6 +40,8 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- `SingleChoice.cloze()` dropped negative fractions, so a wrong choice in an
+  MC/MCV/MCH gap could not deduct points. They are now kept, as in `MultiChoice.cloze()`.
 - Duplicated `return self` in `MetaChoice.set_constraints`.
 - `MultiChoice.set_choices_correct` with three or more corrects produced
   fractions rejected by `validate()`, violating the safe-API contract.
