@@ -18,3 +18,12 @@ def test_singlechoice_generalfeedback_written():
     xml = render_xml([q]).decode("utf-8")
     assert '<generalfeedback format="html">' in xml
     assert "GF-SC" in xml
+
+
+def test_cloze_generalfeedback_written():
+    sc = Q.SingleChoice(name="g1").set_choices_correct("A").set_choices_wrong("B")
+    q = Q.Cloze(name="CZ-GF", questiontext=QuestionText("<p>{{g1}}</p>")).embed_question(sc)
+    q.set_feedback_general(Feedback("GF-CZ", format="html"))
+    xml = render_xml([q]).decode("utf-8")
+    assert '<generalfeedback format="html">' in xml
+    assert "GF-CZ" in xml

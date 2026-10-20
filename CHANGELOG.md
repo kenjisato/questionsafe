@@ -40,6 +40,7 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- Cloze questions dropped their general feedback from the Moodle XML.
 - `SingleChoice.cloze()` dropped negative fractions, so a wrong choice in an
   MC/MCV/MCH gap could not deduct points. They are now kept, as in `MultiChoice.cloze()`.
 - Duplicated `return self` in `MetaChoice.set_constraints`.
