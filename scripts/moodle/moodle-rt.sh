@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Containerized Moodle for round-trip tests (Podman; works with Docker via alias).
 #
-#   scripts/moodle/moodle-rt.sh up [BRANCH]   # start db+web, install Moodle (default: 405)
+#   scripts/moodle/moodle-rt.sh up [BRANCH]   # start db+web, install Moodle (default: 502)
 #   scripts/moodle/moodle-rt.sh status        # is the stack ready?
 #   scripts/moodle/moodle-rt.sh down          # stop and remove containers (keeps images)
 #
-# BRANCH selects the packaged Moodle line, e.g. 405 (4.5 LTS), 500 (5.0).
+# BRANCH selects the packaged Moodle line, e.g. 405 (4.5 LTS), 502 (5.2).
+# Moodle 5.3 requires PostgreSQL 17 (verified with 502 and 503; 405 not re-run on 17).
+# From Git Bash on Windows, export MSYS_NO_PATHCONV=1 so container paths stay as is.
 # Then: QS_MOODLE_ROUNDTRIP=1 uv run pytest tests/test_moodle_roundtrip.py
 set -euo pipefail
 
@@ -15,10 +17,10 @@ DB=qsafe-moodle-db
 WEB=qsafe-moodle-web
 DBPASS=qsafe-moodle
 PHP_IMAGE=docker.io/moodlehq/moodle-php-apache:8.3
-PG_IMAGE=docker.io/library/postgres:16-alpine
+PG_IMAGE=docker.io/library/postgres:17-alpine
 
 up() {
-    local branch="${1:-405}"
+    local branch="${1:-502}"
     local tarball="https://packaging.moodle.org/stable${branch}/moodle-latest-${branch}.tgz"
 
     $ENGINE network exists "$NET" 2>/dev/null || $ENGINE network create "$NET"

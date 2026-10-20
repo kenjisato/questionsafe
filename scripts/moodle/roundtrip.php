@@ -27,7 +27,13 @@ $course = create_course((object) [
     'shortname' => uniqid('qsrt'),
     'category' => core_course_category::get_default()->id,
 ]);
-$context = context_course::instance($course->id);
+// Moodle 5.0+ keeps questions in a question bank module (mod_qbank), not in the course.
+$helper = '\core_question\local\bank\question_bank_helper';
+if (class_exists($helper) && method_exists($helper, 'get_default_open_instance_system_type')) {
+    $context = context_module::instance($helper::get_default_open_instance_system_type($course, true)->id);
+} else {
+    $context = context_course::instance($course->id);
+}
 $category = question_make_default_categories([$context]);
 
 $import = new qformat_xml();
