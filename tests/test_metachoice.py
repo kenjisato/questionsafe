@@ -51,3 +51,25 @@ def test_metachoice_with_local_constraint_union():
     texts = [a.text for a in q.answers]
     assert any(t in {"P1", "P2"} for t in texts)  # at least one policy present
     assert any(t in {"T1", "T2"} for t in texts)  # at least one term present
+
+
+def _pool_six_correct_seven_wrong():
+    correct = [f"C{i}" for i in range(6)]
+    wrong = [f"W{i}" for i in range(7)]
+    mc = MetaChoice().set_choices({k: k for k in correct + wrong})
+    mc.add_stem("S", "Which is correct?", correct=correct)
+    return mc, correct
+
+
+def test_generate_singlechoice_spreads_variants_over_correct_choices():
+    mc, correct = _pool_six_correct_seven_wrong()
+    group = mc.generate_singlechoice(n=4, limit=7, seed=1)
+    chosen = [next(str(a.text) for a in q.answers if a.fraction == 100) for q in group]
+    assert set(chosen) == set(correct)
+
+
+def test_generate_multichoice_spreads_variants_over_correct_choices():
+    mc, correct = _pool_six_correct_seven_wrong()
+    group = mc.generate_multichoice(n=4, limit=6, seed=1, nc=1)
+    chosen = [next(str(a.text) for a in q.answers if a.fraction > 0) for q in group]
+    assert sorted(chosen) == correct

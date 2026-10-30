@@ -40,6 +40,12 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- `MetaChoice.generate_singlechoice` / `generate_multichoice` with a `limit` smaller
+  than the number of feasible subsets returned variants that shared their early
+  picks, often all with the same correct choice (#4). Each variant is now the first
+  feasible, not yet generated subset when choices are ranked by how often they
+  have appeared so far, so variants cycle through the correct choices and the
+  distractors. Output for a given `seed` differs from earlier versions.
 - Cloze questions dropped their general feedback from the Moodle XML.
 - `SingleChoice.cloze()` dropped negative fractions, so a wrong choice in an
   MC/MCV/MCH gap could not deduct points. They are now kept, as in `MultiChoice.cloze()`.
@@ -63,6 +69,8 @@
   - Current semantics: subsequent calls overwrite (do not preserve previous feedback unless explicitly provided).
 
 ### Removed
+- `randomize_branch` on `MetaChoice.generate_*` and `constrained_subsets`; the
+  usage-balanced search replaces it. `randomize_order` now only breaks ties.
 - Legacy MultiChoice sugar methods: correct(), wrong(), choices(), choice(), as_multiple(), numbering(), shuffle(). Examples and tests now use the new API.
 
 ### Tests

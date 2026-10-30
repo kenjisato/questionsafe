@@ -310,7 +310,6 @@ class MetaChoice:
         seed: Optional[int],
         limit: int,
         randomize_order: bool,
-        randomize_branch: bool,
     ) -> List[List[str]]:
         it = constrained_subsets(
             pool,
@@ -319,7 +318,6 @@ class MetaChoice:
             limit=limit,
             seed=seed,
             randomize_order=randomize_order,
-            randomize_branch=randomize_branch,
         )
         pos = {p: i for i, p in enumerate(pool)}
         out: List[List[str]] = [sorted(s, key=pos.get) for s in it]
@@ -388,7 +386,6 @@ class MetaChoice:
         limit: int,
         seed: Optional[int],
         randomize_order: bool,
-        randomize_branch: bool,
         correct_bounds: Optional[tuple[int, int]],
         builder,
         prototype: Optional[Union[MultiChoice, SingleChoice]] = None,
@@ -411,7 +408,6 @@ class MetaChoice:
                 seed=stem_seed,
                 limit=limit,
                 randomize_order=randomize_order,
-                randomize_branch=randomize_branch,
             )
             for subset in subsets:
                 out.append(builder(stem, subset, correct_members, prototype))
@@ -427,7 +423,6 @@ class MetaChoice:
         limit: int = 1,
         seed: Optional[int] = None,
         randomize_order: bool = True,
-        randomize_branch: bool = True,
         nc: Optional[int | tuple[int, int]] = None,
         prototype: Optional[MultiChoice] = None,
     ) -> QuestionGroup:
@@ -438,8 +433,8 @@ class MetaChoice:
         - limit: max number of distinct combinations per stem (>=1). Each combination
                  yields one MultiChoice question.
         - seed: optional base seed; per-stem seeds are derived deterministically from it.
-        - randomize_order: whether to randomize the order of items before search.
-        - randomize_branch: whether to randomize include/skip decisions during search.
+        - randomize_order: break ties between equally used choices at random (seeded);
+                 if False, by pool order. Variants are spread over the pool either way.
         - nc: constrain the number of correct choices per sampled subset.
               If an int, exactly that many corrects.
               If a (min,max) tuple, range of allowed corrects, inclusive.
@@ -464,7 +459,6 @@ class MetaChoice:
             limit=limit,
             seed=seed,
             randomize_order=randomize_order,
-            randomize_branch=randomize_branch,
             correct_bounds=bounds,
             builder=self._build_multichoice,
             prototype=prototype,
@@ -477,7 +471,6 @@ class MetaChoice:
         limit: int = 1,
         seed: Optional[int] = None,
         randomize_order: bool = True,
-        randomize_branch: bool = True,
         prototype: Optional[SingleChoice] = None,
     ) -> QuestionGroup:
         """Generate SingleChoice questions for each stem and return a QuestionGroup.
@@ -491,7 +484,6 @@ class MetaChoice:
             limit=limit,
             seed=seed,
             randomize_order=randomize_order,
-            randomize_branch=randomize_branch,
             correct_bounds=(1, 1),
             builder=self._build_singlechoice,
             prototype=prototype,

@@ -106,6 +106,8 @@ group2 = mc.generate_singlechoice(n=4, limit=3, seed=42)  # forces exactly one c
 - With k correct choices in a subset, fractions snap to the Moodle value closest to
   100/k; unsnappable splits (e.g., k=11) raise `ValueError`.
 - `nc` fixes the number of correct choices per subset (int or `(min, max)`).
+- Variants spread over the pool: each is the first feasible, not yet generated subset
+  with the least-used choices ranked first (`seed` breaks ties).
 - `prototype` is a question deep-copied per variant to carry defaults
   (shuffle, labels, combined feedback); its answers are replaced.
 - Sampling is a DFS over subsets (`base._choice_sampling.constrained_subsets`) with

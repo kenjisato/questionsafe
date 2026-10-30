@@ -65,21 +65,23 @@ def constrained_subsets(
     limit: Optional[int] = None,
     seed: Optional[int] = None,
     randomize_order: bool = True,
-    randomize_branch: bool = True,
 ) -> Iterator[Set[Hashable]]:
-    """Yield subsets of size n from items that satisfy all constraints.
+    """Yield distinct subsets of size n from items that satisfy all constraints.
 
     - items must contain hashable elements.
     - groups may overlap; all bounds are enforced simultaneously. You may supply
       multiple Constraint with the same `id` to represent combined constraints
       (e.g., global and local); they will both be enforced without merging.
     - Bounds semantics follow Constraint.
-    - Enumeration order is randomized by default for diversity; set seed for
-      reproducibility. Use limit to cap the number of yielded subsets.
+    - Usage is spread: each subset is the first feasible, not yet yielded one when
+      items are ranked by how often they have been yielded so far, so a small
+      `limit` still cycles through the items. Ties are broken at random (seeded)
+      if randomize_order, else by input order.
+    - Use limit to cap the number of yielded subsets; None yields all of them.
     """
     items_list: List[Hashable] = list(items)
     if n < 0 or n > len(items_list):
-        return iter(())
+        return
 
     groups_list: List[Constraint] = list(groups)
 
@@ -91,91 +93,53 @@ def constrained_subsets(
             raise ValueError(f"Constraint {g.id} has members not present in items: {sorted(diff)}")
 
     rng = random.Random(seed)
-    if randomize_order:
-        items_work = items_list[:]
-        rng.shuffle(items_work)
-    else:
-        items_work = items_list
+    bounds = _normalize_bounds(groups_list, total=len(items_list))
+    usage: Dict[Hashable, int] = {x: 0 for x in items_list}
+    seen: Set[frozenset] = set()
 
-    bounds = _normalize_bounds(groups_list, total=len(items_work))
-    suf = _suffix_counts(items_work, groups_list)
+    while limit is None or len(seen) < limit:
+        tiebreak = {x: (rng.random() if randomize_order else i) for i, x in enumerate(items_list)}
+        ranked = sorted(items_list, key=lambda x: (usage[x], tiebreak[x]))
+        subset = next((s for s in _feasible_subsets(ranked, groups_list, bounds, n) if s not in seen), None)
+        if subset is None:
+            return
+        seen.add(subset)
+        for x in subset:
+            usage[x] += 1
+        yield set(subset)
 
+
+def _feasible_subsets(
+    items: Sequence[Hashable],
+    groups: Sequence[Constraint],
+    bounds: Dict[Constraint, Tuple[int, int]],
+    n: int,
+) -> Iterator[frozenset]:
+    """Yield every feasible subset, preferring earlier items (depth-first, include first)."""
+    suf = _suffix_counts(items, groups)
     chosen: List[Hashable] = []
-    count: Dict[Constraint, int] = {g: 0 for g in groups_list}
-    emitted = 0
+    count: Dict[Constraint, int] = {g: 0 for g in groups}
 
-    def add(x: Hashable):
+    def step(x: Hashable, d: int) -> None:
+        for g in groups:
+            if x in g.members:
+                count[g] += d
+
+    def dfs(i: int) -> Generator[frozenset, None, None]:
+        if len(chosen) == n:
+            if all(L <= count[g] <= U for g, (L, U) in bounds.items()):
+                yield frozenset(chosen)
+            return
+        if len(chosen) + len(items) - i < n:
+            return
+        if any(count[g] > U or count[g] + suf[g][i] < L for g, (L, U) in bounds.items()):
+            return
+        x = items[i]
         chosen.append(x)
-        for g in groups_list:
-            if x in g.members:
-                count[g] += 1
-
-    def rem(x: Hashable):
+        step(x, 1)
+        yield from dfs(i + 1)
+        step(x, -1)
         chosen.pop()
-        for g in groups_list:
-            if x in g.members:
-                count[g] -= 1
-
-    def violates_upper() -> bool:
-        for g, (_L, U) in bounds.items():
-            if count[g] > U:
-                return True
-        return False
-
-    def lower_reachable(i: int) -> bool:
-        for g, (L, _U) in bounds.items():
-            if count[g] + suf[g][i] < L:
-                return False
-        return True
-
-    def meets_all_bounds() -> bool:
-        for g, (L, U) in bounds.items():
-            c = count[g]
-            if not (L <= c <= U):
-                return False
-        return True
-
-    def dfs(i: int) -> Generator[Set[Hashable], None, None]:
-        nonlocal emitted
-        if limit is not None and emitted >= limit:
-            return
-
-        picked = len(chosen)
-        rem_items = len(items_work) - i
-
-        if picked == n:
-            if meets_all_bounds():
-                emitted += 1
-                yield set(chosen)
-            return
-
-        if picked > n or picked + rem_items < n:
-            return
-
-        if violates_upper() or not lower_reachable(i):
-            return
-
-        if i == len(items_work):
-            return
-
-        x = items_work[i]
-
-        include_first = True
-        if randomize_branch:
-            # If x helps any unmet lower bound, prefer including; else random flip
-            helps = any((count[g] < bounds[g][0]) and (x in g.members) for g in groups_list)
-            include_first = helps or (rng.random() < 0.5)
-
-        if include_first:
-            add(x)
-            yield from dfs(i + 1)
-            rem(x)
-            yield from dfs(i + 1)
-        else:
-            yield from dfs(i + 1)
-            add(x)
-            yield from dfs(i + 1)
-            rem(x)
+        yield from dfs(i + 1)
 
     yield from dfs(0)
-

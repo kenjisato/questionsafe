@@ -105,10 +105,23 @@ bound the correct count with `nc=` in that case.
   total questions ≤ #stems × limit, capped by feasibility.
   If no feasible subset exists, generation raises `ValueError`.
 - `seed`: base seed; per-stem seeds are derived deterministically (seed + stem index).
-- `randomize_order` / `randomize_branch`: control randomness inside the subset sampler.
+- `randomize_order`: break ties between equally used choices at random (seeded);
+  `False` breaks them by pool order.
 - `nc` (multichoice only): number of correct choices per subset, either an int
   (exactly that many) or a `(min, max)` tuple. `None` keeps the bounds of the
   correct group.
+
+Variants are spread over the pool: each one is the first feasible combination not
+generated yet when choices are ranked by how often they have appeared so far. With 6
+correct choices and `limit=6`, a single-correct stem asks about each correct choice
+once, and the distractors rotate in the same way.
+
+To keep a statement and its negation out of the same variant, cap the pair with a
+constraint:
+
+```python
+mc.add_constraint("SHIFT_UP", "SHIFT_DOWN", max=1, id="direction")
+```
 
 `generate_singlechoice` tightens the correct group to exactly one correct choice per
 subset and emits `SingleChoice` questions; a stem whose correct group demands more than
