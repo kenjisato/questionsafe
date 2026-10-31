@@ -32,6 +32,8 @@
   `scripts/moodle/roundtrip.php` through Moodle's own `qformat_xml`).
   Verified versions are recorded in `docs/moodle-compat.md` (4.5 LTS: OK,
   2026-08-29, including the snapped 33.33333 fractions).
+  Stacks are per Moodle branch (`moodle-rt.sh up 405`, `up 502`) and can run side
+  by side; each round-trip test runs once per running stack.
 
 ### Changed (MetaChoice / MultiChoice fractions)
 - `Stem.text` widened to `Text | str`; `add_stem` no longer flattens a `Text`

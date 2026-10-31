@@ -37,10 +37,14 @@ context can no longer hold question categories. The harness imports into the
 course's default shared bank on 5.0+ and into the course context on 4.x.
 
 ```sh
-scripts/moodle/moodle-rt.sh up            # default 502 = Moodle 5.2.x; 405 = 4.5.x, 503 = 5.3.x
+scripts/moodle/moodle-rt.sh up 405        # default 502 = Moodle 5.2.x; 405 = 4.5.x, 503 = 5.3.x
+scripts/moodle/moodle-rt.sh up 502        # stacks are per branch and can run side by side
 QS_MOODLE_ROUNDTRIP=1 uv run pytest tests/test_moodle_roundtrip.py -v
-scripts/moodle/moodle-rt.sh down          # remove containers when done
+scripts/moodle/moodle-rt.sh down          # remove all stacks (or: down 405)
 ```
+
+Each test runs once per running stack (`qsafe-moodle-BRANCH-web`); with none running,
+the tests fail rather than skip.
 
 The test is skipped unless `QS_MOODLE_ROUNDTRIP` is set, so the regular
 `uv run pytest` run stays container-free. The import/export inside the

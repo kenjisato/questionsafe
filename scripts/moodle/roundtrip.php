@@ -1,5 +1,5 @@
 <?php
-// Round-trip harness, run inside the qsafe-moodle-web container:
+// Round-trip harness, run inside a qsafe-moodle-BRANCH-web container:
 //   php roundtrip.php /path/to/import.xml /path/to/export.xml
 //
 // Imports the XML with Moodle's qformat_xml (the de-facto oracle for the

@@ -6,9 +6,11 @@ and compare what survived.
 
 Opt-in because it needs a running container stack (several minutes on first start):
 
-    scripts/moodle/moodle-rt.sh up
+    scripts/moodle/moodle-rt.sh up 405; scripts/moodle/moodle-rt.sh up 502
     QS_MOODLE_ROUNDTRIP=1 uv run pytest tests/test_moodle_roundtrip.py -v
     scripts/moodle/moodle-rt.sh down
+
+Every test runs once per running stack (qsafe-moodle-BRANCH-web).
 """
 from __future__ import annotations
 
@@ -27,7 +29,6 @@ pytestmark = pytest.mark.skipif(
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CONTAINER = "qsafe-moodle-web"
 HARNESS = REPO_ROOT / "scripts" / "moodle" / "roundtrip.php"
 
 
@@ -37,7 +38,21 @@ def _podman(*args: str, **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(["podman", *args], capture_output=True, text=True, **kwargs)
 
 
-def _roundtrip(xml: bytes, tmp_path: Path) -> tuple[bytes, str]:
+def _running_stacks() -> list[str]:
+    if not os.environ.get("QS_MOODLE_ROUNDTRIP"):
+        return []
+    ps = _podman("ps", "--format", "{{.Names}}")
+    return sorted(n for n in ps.stdout.split() if re.fullmatch(r"qsafe-moodle-\d+-web", n))
+
+
+@pytest.fixture(params=_running_stacks() or [None])
+def container(request) -> str:
+    if request.param is None:
+        pytest.fail("no Moodle stack is running: scripts/moodle/moodle-rt.sh up [BRANCH]")
+    return request.param
+
+
+def _roundtrip(xml: bytes, tmp_path: Path, container: str) -> tuple[bytes, str]:
     """Import xml into the container's Moodle, export it back.
 
     Returns (exported_xml, moodle_release).
@@ -45,14 +60,14 @@ def _roundtrip(xml: bytes, tmp_path: Path) -> tuple[bytes, str]:
     import_file = tmp_path / "import.xml"
     import_file.write_bytes(xml)
     for src, dst in [
-        (str(HARNESS), f"{CONTAINER}:/tmp/roundtrip.php"),
-        (str(import_file), f"{CONTAINER}:/tmp/import.xml"),
+        (str(HARNESS), f"{container}:/tmp/roundtrip.php"),
+        (str(import_file), f"{container}:/tmp/import.xml"),
     ]:
         cp = _podman("cp", src, dst)
         assert cp.returncode == 0, f"podman cp failed: {cp.stderr}"
 
     run = _podman(
-        "exec", CONTAINER,
+        "exec", container,
         "php", "/tmp/roundtrip.php", "/tmp/import.xml", "/tmp/export.xml",
     )
     assert run.returncode == 0, (
@@ -64,7 +79,7 @@ def _roundtrip(xml: bytes, tmp_path: Path) -> tuple[bytes, str]:
         release = m.group(1).strip()
 
     export_file = tmp_path / "export.xml"
-    cp = _podman("cp", f"{CONTAINER}:/tmp/export.xml", str(export_file))
+    cp = _podman("cp", f"{container}:/tmp/export.xml", str(export_file))
     assert cp.returncode == 0, f"podman cp back failed: {cp.stderr}"
     return export_file.read_bytes(), release
 
@@ -211,13 +226,13 @@ def _build_quiz(tmp_path: Path):
 
 # --- the test -----------------------------------------------------------------
 
-def test_roundtrip_through_real_moodle(tmp_path):
+def test_roundtrip_through_real_moodle(tmp_path, container):
     from questionsafe.writer.moodle import render_xml
 
     qz = _build_quiz(tmp_path)
     ours = render_xml(qz)
 
-    theirs, release = _roundtrip(ours, tmp_path)
+    theirs, release = _roundtrip(ours, tmp_path, container)
     assert release, "harness did not report the Moodle release"
     print(f"\nround-tripped against Moodle {release}")
 
