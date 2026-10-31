@@ -3,7 +3,7 @@
 {% macro name_and_stem(n) -%}
   <name><text>{{ n.name | e }}</text></name>
   <questiontext format="{{ n.stem_format | default('html') }}">
-    <text>{{ n.stem_text | cdata }}</text>
+    <text>{{ n.stem_text | moodle_text(n.stem_format) | cdata }}</text>
   </questiontext>
 {%- endmacro %}
 
@@ -17,7 +17,7 @@
 {%- macro general_feedback_block(n) %}
   {%- if n.feedback_general_text %}
   <generalfeedback format="{{ n.feedback_general_format | default('html') }}">
-    <text>{{ n.feedback_general_text | cdata }}</text>
+    <text>{{ n.feedback_general_text | moodle_text(n.feedback_general_format) | cdata }}</text>
   </generalfeedback>
   {%- endif %}
 {%- endmacro %}
@@ -25,7 +25,7 @@
 {% macro feedback_block(text, fmt) -%}
   {%- if text %}
     <feedback format="{{ fmt | default('html') }}">
-      <text>{{ text | cdata }}</text>
+      <text>{{ text | moodle_text(fmt) | cdata }}</text>
     </feedback>
   {%- endif -%}
 {%- endmacro %}
@@ -34,7 +34,7 @@
 {% macro answer_text_block(answers) -%}
   {% for a in answers %}
   <answer fraction="{{ a.fraction }}"{% if a.answer_format is defined and a.answer_format %} format="{{ a.answer_format }}"{% endif %}>
-    <text>{{ a.text | e }}</text>
+    <text>{{ a.text | moodle_text(a.answer_format) | e }}</text>
     {{- feedback_block(a.feedback_text, a.feedback_format) }}
   </answer>
   {%- endfor %}
@@ -57,17 +57,17 @@
   {%- if n.has_combined_feedback %}
     {%- if n.feedback_correct_text %}
     <correctfeedback format="{{ n.feedback_correct_format | default('html') }}">
-      <text>{{ n.feedback_correct_text | cdata }}</text>
+      <text>{{ n.feedback_correct_text | moodle_text(n.feedback_correct_format) | cdata }}</text>
     </correctfeedback>
     {%- endif %}
     {%- if n.feedback_partially_text %}
     <partiallycorrectfeedback format="{{ n.feedback_partially_format | default('html') }}">
-      <text>{{ n.feedback_partially_text | cdata }}</text>
+      <text>{{ n.feedback_partially_text | moodle_text(n.feedback_partially_format) | cdata }}</text>
     </partiallycorrectfeedback>
     {%- endif %}
     {%- if n.feedback_incorrect_text %}
     <incorrectfeedback format="{{ n.feedback_incorrect_format | default('html') }}">
-      <text>{{ n.feedback_incorrect_text | cdata }}</text>
+      <text>{{ n.feedback_incorrect_text | moodle_text(n.feedback_incorrect_format) | cdata }}</text>
     </incorrectfeedback>
     {%- endif %}
   {%- endif %}
@@ -78,7 +78,7 @@
     {%- if n.hints %}
       {%- for h in n.hints %}
         <hint format="{{ h.format | default('html') }}">
-          <text>{{ h.text | cdata }}</text>
+          <text>{{ h.text | moodle_text(h.format) | cdata }}</text>
           {%- if h.shownumcorrect %}<shownumcorrect/>{%- endif %}
           {%- if h.clearwrong %}<clearwrong/>{%- endif %}
         </hint>

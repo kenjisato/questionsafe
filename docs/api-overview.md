@@ -47,7 +47,7 @@ choice types mix in `CombinedFeedbackMixin` (`set_feedback_correct/partiallycorr
 | `Q.ShortAnswer` | `shortanswer` | `add_answer` (fraction defaults to 100), `set_usecase`, `.cloze()` |
 | `Q.Essay` | `essay` | ~14 setters over `EssayTextArea`/`EssayAttachments`/`EssayResponse` options |
 | `Q.Description` | `description` | display-only text |
-| `Q.Cloze` | `cloze` | `embed_question(q, orientation, weight)`, `set_scoring(rule)`, `compile_text()` |
+| `Q.Cloze` | `cloze` | `embed_question(q, orientation, weight)`, `set_scoring(rule)`, `compile_text(text=None)` |
 | `Q.Category` | `category` pseudo-question | `Category(path)`; path is normalized with `$course$/` |
 
 Safe methods and validation rules are specified in `AGENTS.md` (Safe API contract);

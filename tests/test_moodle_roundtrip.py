@@ -30,6 +30,7 @@ pytestmark = pytest.mark.skipif(
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HARNESS = REPO_ROOT / "scripts" / "moodle" / "roundtrip.php"
+FORMAT_HARNESS = REPO_ROOT / "scripts" / "moodle" / "format_text.php"
 
 
 # --- container plumbing -------------------------------------------------------
@@ -82,6 +83,26 @@ def _roundtrip(xml: bytes, tmp_path: Path, container: str) -> tuple[bytes, str]:
     cp = _podman("cp", f"{container}:/tmp/export.xml", str(export_file))
     assert cp.returncode == 0, f"podman cp back failed: {cp.stderr}"
     return export_file.read_bytes(), release
+
+
+def _format_text(items: list[dict], tmp_path: Path, container: str) -> list[str]:
+    """Render [{text, format}] with Moodle's format_text(), as a student would see it."""
+    import json
+
+    infile = tmp_path / "format_in.json"
+    infile.write_text(json.dumps(items), encoding="utf-8")
+    for src, dst in [
+        (str(FORMAT_HARNESS), f"{container}:/tmp/format_text.php"),
+        (str(infile), f"{container}:/tmp/format_in.json"),
+    ]:
+        cp = _podman("cp", src, dst)
+        assert cp.returncode == 0, f"podman cp failed: {cp.stderr}"
+    run = _podman("exec", container, "php", "/tmp/format_text.php", "/tmp/format_in.json", "/tmp/format_out.json")
+    assert run.returncode == 0, f"format harness failed\nstdout:\n{run.stdout}\nstderr:\n{run.stderr}"
+    outfile = tmp_path / "format_out.json"
+    cp = _podman("cp", f"{container}:/tmp/format_out.json", str(outfile))
+    assert cp.returncode == 0, f"podman cp back failed: {cp.stderr}"
+    return json.loads(outfile.read_text(encoding="utf-8"))
 
 
 # --- XML comparison -----------------------------------------------------------
@@ -246,3 +267,58 @@ def test_roundtrip_through_real_moodle(tmp_path, container):
         f"missing after reimport: {sorted(missing)}\n"
         f"unexpected after reimport: {sorted(extra)}"
     )
+
+
+MATH = [
+    r"\( a*b*c + x_1 + y_2 \)",
+    r"\( \{x : x > 0\} \)",
+    r"\( \frac{\partial Y}{\partial K} = \alpha \)",
+    r"\[ \begin{aligned} a &= b \\ c &= d \end{aligned} \]",
+]
+
+
+def test_markdown_math_reaches_the_student(tmp_path, container):
+    """TeX in markdown texts survives import and Moodle's Markdown rendering (#7)."""
+    import html
+
+    from lxml import etree
+
+    from questionsafe import Q, Quiz, Text
+    from questionsafe.base import Feedback
+    from questionsafe.writer.moodle import render_xml
+
+    body = "Let " + " and ".join(MATH) + ", with *emphasis*."
+    sc = (
+        Q.SingleChoice(name="rt-math-sc")
+        .set_questiontext(Text(body, format="markdown"))
+        .set_choice_correct("A")
+        .set_choices_wrong("B")
+    )
+    sc.set_feedback_general(Feedback(body, format="markdown"))
+    gap = Q.SingleChoice(name="g").set_choice_correct("Tokyo").set_choices_wrong("Osaka")
+    cloze = Q.Cloze(name="rt-math-cloze", questiontext=Text(body + " {{g}}", format="markdown"))
+    cloze.embed_question(gap)
+    qz = Quiz(category="RT-math")
+    qz.add(sc)
+    qz.add(cloze)
+
+    theirs, release = _roundtrip(render_xml(qz), tmp_path, container)
+    root = etree.fromstring(theirs)
+    fields = [
+        (q.findtext("name/text").strip(), tag, el.get("format"), el.findtext("text"))
+        for q in root.findall("question")
+        if q.get("type") != "category"
+        for tag in ("questiontext", "generalfeedback")
+        if (el := q.find(tag)) is not None and el.findtext("text")
+    ]
+    assert {(n, t) for n, t, _, _ in fields} >= {
+        ("rt-math-sc", "questiontext"),
+        ("rt-math-sc", "generalfeedback"),
+        ("rt-math-cloze", "questiontext"),
+    }
+    rendered = _format_text([{"text": text, "format": fmt} for _, _, fmt, text in fields], tmp_path, container)
+    for (name, tag, fmt, _), out in zip(fields, rendered):
+        shown = _norm(html.unescape(re.sub(r"<[^>]+>", "", out)))
+        for tex in MATH:
+            assert _norm(tex) in shown, f"{name}/{tag} ({fmt}) on Moodle {release}: {tex!r} not in {shown!r}"
+        assert "<em>emphasis</em>" in out

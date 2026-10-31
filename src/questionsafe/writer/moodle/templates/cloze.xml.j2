@@ -1,7 +1,10 @@
 {% import "_macros.xml.j2" as mx %}
 <question type="cloze">
-  {{ mx.name_and_stem(n) }}
+  {#- stem_text is final: the context escapes markdown math before inserting the gaps #}
+  <name><text>{{ n.name | e }}</text></name>
+  <questiontext format="{{ n.stem_format | default('html') }}">
+    <text>{{ n.stem_text | cdata }}</text>
+  </questiontext>
   {{ mx.general_feedback_block(n) }}
   {{ mx.tags_and_id(n) }}
 </question>
-

@@ -63,6 +63,24 @@ Which statement about the AS curve is correct?
 - To keep such a heading as question text, end it with `{.noqs}`
   (`## /choices {.noqs}`); the marker is removed. Headings inside code fences are never reserved.
 
+## Math
+
+Write TeX with `\( ... \)` (inline) and `\[ ... \]` (display), as in any Markdown text:
+
+```markdown
+Let \( Y = C + I \) and \( \{x : x > 0\} \).
+```
+
+Texts with `format: markdown` stay Markdown in Moodle; when writing the XML, questionsafe
+backslash-escapes the Markdown specials inside each math span, so Moodle's Markdown
+converter hands the TeX to MathJax unchanged (without this, `\(` loses its backslash and
+`*`/`_` become emphasis). The original text is unchanged; only the XML carries the escapes,
+which is also what you see when editing the question in Moodle. Code spans and fences are
+left alone, and `\\(` is a literal `\(`, not math.
+
+`$...$` is not math: Moodle's MathJax filter does not treat `$` as a delimiter by default.
+Moodle shows the math only with the MathJax filter enabled (it is by default).
+
 ## SingleChoice
 
 Single-answer choice question; exactly one correct answer with fraction=100 and no other positive fractions. Supports choice_layout (labels/shuffle/single_choice), hints, general feedback, tags, id.

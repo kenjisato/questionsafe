@@ -22,9 +22,9 @@
   <filetypeslist>{{ n.filetypeslist }}</filetypeslist>
   {%- endif %}
   {%- if n.responsetemplate_text %}
-  <responsetemplate format="{{ n.responsetemplate_format | default('html') }}"><text>{{ n.responsetemplate_text | cdata }}</text></responsetemplate>
+  <responsetemplate format="{{ n.responsetemplate_format | default('html') }}"><text>{{ n.responsetemplate_text | moodle_text(n.responsetemplate_format) | cdata }}</text></responsetemplate>
   {%- endif %}
-  {%- if n.graderinfo_text %}<graderinfo format="{{ n.graderinfo_format | default('html') }}"><text>{{ n.graderinfo_text | cdata }}</text></graderinfo>{%- endif %}
+  {%- if n.graderinfo_text %}<graderinfo format="{{ n.graderinfo_format | default('html') }}"><text>{{ n.graderinfo_text | moodle_text(n.graderinfo_format) | cdata }}</text></graderinfo>{%- endif %}
   <answer fraction="0"><text></text></answer>
   {{- mx.tags_and_id(n) }}
 </question>

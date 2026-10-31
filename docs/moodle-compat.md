@@ -14,6 +14,8 @@ a containerized Moodle, exports it back, and compares what survived
 
 | Moodle release | Result | Date | Scope |
 |---|---|---|---|
+| 5.2.4+ (Build: 20261030) | OK | 2026-10-31 | same round-trip test as below + markdown math display (`test_markdown_math_reaches_the_student`) |
+| 4.5.15+ (Build: 20261030) | OK | 2026-10-31 | same round-trip test as below + markdown math display |
 | 5.3+ (Build: 20261013) | OK | 2026-10-20 | same round-trip test as below |
 | 5.2.4+ (Build: 20261013) | OK | 2026-10-20 | same round-trip test as below |
 | 4.5.13+ (Build: 20260818) | OK | 2026-08-29 | multichoice (incl. 33.33333 fractions), singlechoice, truefalse, shortanswer, numerical (tolerance + unit), essay, description, cloze, MetaChoice-generated variants (14 questions) |
@@ -50,6 +52,8 @@ The test is skipped unless `QS_MOODLE_ROUNDTRIP` is set, so the regular
 `uv run pytest` run stays container-free. The import/export inside the
 container is driven by `scripts/moodle/roundtrip.php`, a CLI harness that
 calls `qformat_xml` directly against a fresh course per run.
+`scripts/moodle/format_text.php` renders texts with Moodle's `format_text()`, so a
+test can check what the student's browser receives (used for markdown math).
 
 When a new Moodle release is verified (or fails), add a row to the table above
 with the test date.

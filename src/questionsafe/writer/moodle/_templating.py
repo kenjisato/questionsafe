@@ -6,6 +6,8 @@ from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, PackageLoader, ChoiceLoader
 
+from .utils import escape_markdown_math
+
 
 def make_env(user_dir: Optional[str], kind: str) -> Environment:
     """
@@ -33,6 +35,12 @@ def make_env(user_dir: Optional[str], kind: str) -> Environment:
         return f"<![CDATA[{s}]]>"
 
     env.filters["cdata"] = cdata
+
+    def moodle_text(s: Optional[str], fmt: Optional[str]) -> Optional[str]:
+        """Text as Moodle should store it for format fmt."""
+        return escape_markdown_math(s) if s and fmt == "markdown" else s
+
+    env.filters["moodle_text"] = moodle_text
 
     def xmlbool(b: object) -> str:
         return "true" if (b is True or str(b).lower() in ("true", "1")) else "false"

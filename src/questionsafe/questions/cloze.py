@@ -62,10 +62,12 @@ class Cloze(Question):
         return self
 
     # Public helper for writer and users: produce inline CLOZE tokens and replace placeholders
-    def compile_text(self) -> str:
+    def compile_text(self, text: Optional[str] = None) -> str:
+        """Replace each ``{{identifier}}`` in text (default: the question text) with its gap."""
         import re
 
-        text = self.questiontext.text  # type: ignore[attr-defined]
+        if text is None:
+            text = self.questiontext.text  # type: ignore[attr-defined]
         for ident, (subq, orientation, weight) in self._embedded.items():
             token = subq.cloze(orientation=orientation, weight=weight)
             # Match {{ ident }} with optional whitespace around ident

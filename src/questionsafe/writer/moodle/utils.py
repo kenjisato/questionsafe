@@ -1,7 +1,30 @@
 # Moodle-specific helpers
 from __future__ import annotations
+import re
 from typing import Any, Dict
 from .._common import rt_text, rt_format  # use common helpers
+
+
+# Code (fenced or inline) is skipped; a math span opens with an unescaped \( or \[.
+_CODE_OR_MATH = re.compile(
+    r"(```.*?```|`[^`\n]*`)|(?<!\\)(\\\(.*?\\\)|\\\[.*?\\\])",
+    re.DOTALL,
+)
+_MARKDOWN_SPECIAL = re.compile(r"([\\`*_{}\[\]()#+\-.!:|>])")
+
+
+def escape_markdown_math(text: str) -> str:
+    """Backslash-escape Markdown specials inside \\( \\) and \\[ \\] spans.
+
+    Moodle's Markdown converter otherwise eats the backslashes and turns `*`/`_`
+    into emphasis, so the TeX never reaches MathJax. Idempotent: escaped
+    delimiters are preceded by a backslash and no longer open a span.
+    """
+
+    def repl(m: re.Match[str]) -> str:
+        return m.group(0) if m.group(1) else _MARKDOWN_SPECIAL.sub(r"\\\1", m.group(2))
+
+    return _CODE_OR_MATH.sub(repl, text)
 
 
 def base_question(q: Any) -> Dict[str, Any]:

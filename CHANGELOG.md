@@ -46,6 +46,13 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- TeX in `format: markdown` texts reached the student broken: Moodle's Markdown
+  converter dropped the backslash of `\(` / `\[` and read `*` / `_` inside math as
+  emphasis (#7). The Moodle writer now backslash-escapes Markdown specials inside
+  math spans in markdown texts (question text, feedback, hints, essay template and
+  grader info, cloze stem outside the gaps); the format stays `markdown`.
+  `Cloze.compile_text(text=None)` takes the template to fill. Verified on Moodle
+  4.5 and 5.2 with `format_text()` (`scripts/moodle/format_text.php`).
 - `MetaChoice.generate_singlechoice` / `generate_multichoice` with a `limit` smaller
   than the number of feasible subsets returned variants that shared their early
   picks, often all with the same correct choice (#4). Each variant is now the first
