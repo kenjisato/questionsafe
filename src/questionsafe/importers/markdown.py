@@ -409,6 +409,72 @@ def _parse_mc_constraints(
     return global_map, local_maps
 
 
+# --- Reserved body sections (`## /choices`) ---------------------------------
+
+_SECTION_HEADING = re.compile(r"^ {0,3}#{1,6}[ \t]+(/.*?)[ \t]*$")
+_NOQS = re.compile(r"[ \t]*\{\.noqs\}$")
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_RESERVED_SECTIONS = {"choices"}
+_CHOICE_TYPES = {"singlechoice", "single", "sc", "multichoice", "multiple", "multi", "mc", "truefalse", "tf"}
+
+
+def _split_sections(body: str) -> Tuple[str, Dict[str, list[str]]]:
+    """Split the body into question text and reserved sections.
+
+    A reserved section starts at a heading (any level) whose text begins with `/`
+    and runs to the next one or the end. `{.noqs}` at the end of such a heading
+    keeps it as an ordinary heading (with the marker stripped). Headings inside
+    fenced code blocks are never reserved.
+    """
+    text: list[str] = []
+    sections: Dict[str, list[str]] = {}
+    current = text
+    fence: str | None = None
+    for line in body.splitlines():
+        m = _FENCE.match(line)
+        if m:
+            if fence is None:
+                fence = m.group(1)
+            elif line.strip().startswith(fence[0] * len(fence)):
+                fence = None
+        h = None if fence is not None else _SECTION_HEADING.match(line)
+        if h is None:
+            current.append(line)
+        elif _NOQS.search(line):
+            current.append(_NOQS.sub("", line))
+        else:
+            name = h.group(1)[1:]
+            if name not in _RESERVED_SECTIONS:
+                raise ValueError(
+                    f"unknown reserved section '/{name}'; reserved: "
+                    f"{', '.join('/' + n for n in sorted(_RESERVED_SECTIONS))} "
+                    "(add {.noqs} to keep the heading as question text)"
+                )
+            if name in sections:
+                raise ValueError(f"reserved section '/{name}' appears more than once")
+            current = sections[name] = []
+    return "\n".join(text), sections
+
+
+def _parse_choice_list(lines: list[str]) -> list[str]:
+    """Parse the `/choices` section: a bullet list; indented lines continue an item."""
+    items: list[list[str]] = []
+    for line in lines:
+        if not line.strip():
+            continue
+        m = re.match(r"^[-*+][ \t]+(.*)$", line)
+        if m:
+            items.append([m.group(1).strip()])
+        elif items and line[:1] in " \t":
+            items[-1].append(line.strip())
+        else:
+            raise ValueError(f"section '/choices' must contain only a list of choices; got: {line!r}")
+    if not items:
+        raise ValueError("section '/choices' is empty")
+    return ["\n".join(item) for item in items]
+
+
+
 @dataclass
 class Reader:
     """Read a single question from a Markdown file with YAML front matter.
@@ -456,6 +522,17 @@ class Reader:
         qtype = str(meta.get("type", "")).strip().lower()
         if not qtype:
             raise ValueError("front matter must include 'type'")
+
+        body, sections = _split_sections(body)
+        if "choices" in sections:
+            if qtype not in _CHOICE_TYPES:
+                raise ValueError(f"section '/choices' is not supported for type '{qtype}'")
+            if meta.get("choices"):
+                raise ValueError("Provide choices either in front matter or in '/choices', not both")
+            items = _parse_choice_list(sections["choices"])
+            if self._choices_checkbox(items) is None:
+                raise ValueError("each choice in '/choices' must start with (x), (o), or ( )")
+            meta["choices"] = items
         return meta, body, qtype
 
     # --- Public API ---
@@ -942,7 +1019,7 @@ class Reader:
         import re
         checks: list[bool] = []
         labels: list[str] = []
-        pat = re.compile(r"^\s*\((x|X|o|O| )\)\s+(.+?)\s*$")
+        pat = re.compile(r"^\s*\((x|X|o|O| )\)\s+(.+?)\s*$", re.DOTALL)
         for item in choices_list:
             s = str(item)
             m = pat.match(s)

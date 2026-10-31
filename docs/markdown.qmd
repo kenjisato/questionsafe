@@ -34,6 +34,35 @@ Notes:
 - When a question type does not support a configuration (e.g., combined feedback for SingleChoice), the importer will emit a warning and ignore it.
 - If conflicting configurations are given (e.g., both answers and choices), the importer raises an error.
 
+## Choices in the body
+
+For singlechoice, multichoice, and truefalse, choices can be written as a checkbox list
+under the reserved heading `/choices` instead of front matter `choices:`:
+
+```markdown
+---
+type: singlechoice
+name: AS
+---
+
+Which statement about the AS curve is correct?
+
+## /choices
+
+- (x) The AS curve slopes upward
+  because some prices are sticky.
+- ( ) The AS curve is vertical when all prices are sticky.
+```
+
+- `(x)` or `(o)` (either case) marks a correct choice, `( )` a wrong one,
+  as in front matter `choices:`. Indented lines continue the choice above.
+- Text before the first reserved heading is the question text.
+- A reserved heading is a heading of any level whose text starts with `/`.
+  Reserved names: `/choices`. An unknown name is an error; so is giving
+  both front matter `choices:` and `/choices`.
+- To keep such a heading as question text, end it with `{.noqs}`
+  (`## /choices {.noqs}`); the marker is removed. Headings inside code fences are never reserved.
+
 ## SingleChoice
 
 Single-answer choice question; exactly one correct answer with fraction=100 and no other positive fractions. Supports choice_layout (labels/shuffle/single_choice), hints, general feedback, tags, id.

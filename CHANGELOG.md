@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Choices in the Markdown body: singlechoice / multichoice / truefalse files can list
+  choices as a checkbox list under a reserved heading `## /choices` (any level)
+  instead of front matter `choices:` (#5). Headings starting with `/` are reserved;
+  an unknown name is an error, and `{.noqs}` keeps such a heading as question text.
 - Named scoring rules for wrong choices, after R/exams' `exams_eval`:
   `MultiChoice.set_scoring(rule)` (also `SingleChoice`) sets every wrong choice to
   `false2` (-1/max(n_wrong, 2)), `false`, `true`, `all`, or `none`, snapped to a
