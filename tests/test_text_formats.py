@@ -24,7 +24,7 @@ def _feedback_formats(xml: bytes) -> list[str]:
 def test_multichoice_writes_the_choice_format():
     q = Q.MultiChoice(name="M").set_choices_correct(Text(r"**A** \( a*b \)", format="markdown"))
     q.set_choices_wrong("B")
-    assert _answers(render_xml([q])) == [("markdown", r"**A** \\\( a\*b \\\)"), ("html", "B")]
+    assert set(_answers(render_xml([q]))) == {("markdown", r"**A** \\\( a\*b \\\)"), ("html", "B")}
 
 
 def test_singlechoice_accepts_text_choices():

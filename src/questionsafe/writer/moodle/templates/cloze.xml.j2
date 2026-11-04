@@ -1,9 +1,11 @@
 {% import "_macros.xml.j2" as mx %}
 <question type="cloze">
   {#- stem_text is final: the context escapes markdown math before inserting the gaps #}
+  {%- set t = embed_images(n.stem_text, n.stem_format) %}
   <name><text>{{ n.name | e }}</text></name>
   <questiontext format="{{ n.stem_format | default('html') }}">
-    <text>{{ n.stem_text | cdata }}</text>
+    <text>{{ t.text | cdata }}</text>
+    {{- mx.files_block(t.files) }}
   </questiontext>
   {{ mx.general_feedback_block(n) }}
   {{ mx.tags_and_id(n) }}

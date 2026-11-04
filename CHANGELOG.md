@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### Added
+- Local images in question text and choices (#3): `![alt](path)` and `<img src="path">`
+  are embedded as Moodle files named by content hash; in choices the alt text becomes
+  `Choice image` and the title is dropped. The Markdown reader resolves relative paths
+  against the question file. Raster images only (SVG is an error). With shuffle on,
+  multichoice answers are written in an order fixed by a hash of their text, so the
+  answer ids that Moodle shows in image URLs do not reveal the authoring order. Verified
+  on Moodle 4.5 and 5.2 (import, export, and the attempt display).
 - Choices in the Markdown body: singlechoice / multichoice / truefalse files can list
   choices as a checkbox list under a reserved heading `## /choices` (any level)
   instead of front matter `choices:` (#5). Headings starting with `/` are reserved;

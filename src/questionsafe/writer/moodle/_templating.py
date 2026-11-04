@@ -6,6 +6,7 @@ from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, PackageLoader, ChoiceLoader
 
+from .images import CHOICE_ALT, embed_images, hashed_order
 from .utils import escape_markdown_math
 
 
@@ -41,6 +42,9 @@ def make_env(user_dir: Optional[str], kind: str) -> Environment:
         return escape_markdown_math(s) if s and fmt == "markdown" else s
 
     env.filters["moodle_text"] = moodle_text
+    if kind == "xml":
+        env.globals.update(embed_images=embed_images, CHOICE_ALT=CHOICE_ALT)
+        env.filters["hashed_order"] = hashed_order
 
     def xmlbool(b: object) -> str:
         return "true" if (b is True or str(b).lower() in ("true", "1")) else "false"

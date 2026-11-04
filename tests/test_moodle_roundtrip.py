@@ -366,3 +366,39 @@ def test_essay_template_reaches_the_student_as_written(tmp_path, container):
     theirs, release = _roundtrip(render_xml(qz), tmp_path, container)
     el = etree.fromstring(theirs).find("question[@type='essay']/responsetemplate")
     assert (el.get("format"), el.findtext("text")) == ("markdown", md), f"on Moodle {release}"
+
+
+def test_images_survive_import(tmp_path, container):
+    """Embedded images in question text and choices come back under their hashed names (#3)."""
+    import base64
+
+    from lxml import etree
+
+    from questionsafe import Q, Quiz, Text
+    from questionsafe.writer.moodle import render_xml
+
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    )
+    for name, salt in [("stem.png", b""), ("correct.png", b"C"), ("wrong.png", b"W")]:
+        (tmp_path / name).write_bytes(png + salt)
+    q = (
+        Q.SingleChoice(name="rt-images")
+        .set_questiontext(Text(f"Which? ![The figure]({tmp_path / 'stem.png'})", format="markdown"))
+        .set_choice_correct(Text(f"![correct]({tmp_path / 'correct.png'})", format="markdown"))
+        .set_choices_wrong(f'<img src="{tmp_path / "wrong.png"}" alt="wrong">')
+    )
+    qz = Quiz(category="RT-images")
+    qz.add(q)
+    ours = render_xml(qz)
+
+    def files(xml: bytes) -> list[tuple[str, dict[str, bytes]]]:
+        (el,) = etree.fromstring(xml).findall("question[@type='multichoice']")
+        return [
+            (f.findtext("text"), {x.get("name"): base64.b64decode(x.text) for x in f.findall("file")})
+            for f in [el.find("questiontext"), *el.findall("answer")]
+        ]
+
+    theirs, release = _roundtrip(ours, tmp_path, container)
+    assert sorted(files(theirs)) == sorted(files(ours)), f"on Moodle {release}"
+    assert all(f for _, f in files(theirs))

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from .. import Q, Text
 from ..base._question import Question
 from ..base._answer import Answer
+from ..base._images import sub_images
 from ..base._mixins import MultiTryMixin, CombinedFeedbackMixin
 
 
@@ -577,9 +578,17 @@ class Reader:
         else:
             raise NotImplementedError(f"Unsupported question type: {qtype}")
 
+        for t in [q.questiontext, *(q.answers if isinstance(q, Q.MultiChoice) else [])]:
+            if t is not None:
+                t.text = self._resolve_images(t.text, t.format)
         if validate:
             q.validate()
         return q
+
+    def _resolve_images(self, text: str, fmt: str) -> str:
+        """Make local image paths absolute, relative to this file (#3)."""
+        base = self.path.parent.resolve()
+        return sub_images(text, fmt, lambda src: str(base / Path(src).expanduser()))
 
     def read_metachoice(self, *, include_warn: bool = False, validate: bool = True) -> "MetaChoice":
         """Read a `type: metachoice` file and return the MetaChoice template.
@@ -596,6 +605,8 @@ class Reader:
         name = self._require_name(meta)
         choices = _parse_mc_text_map(meta, "choices")
         stems = _parse_mc_text_map(meta, "stems")
+        for t in [*choices.values(), *stems.values()]:
+            t.text = self._resolve_images(t.text, t.format)
         stem_keys = list(stems.keys())
         choice_keys = list(choices.keys())
         rows = _extract_csv_fence(body)

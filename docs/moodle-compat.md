@@ -14,6 +14,8 @@ a containerized Moodle, exports it back, and compares what survived
 
 | Moodle release | Result | Date | Scope |
 |---|---|---|---|
+| 5.2.4+ (Build: 20261030) | OK | 2026-11-04 | + markdown choices, essay template, embedded images (`test_images_survive_import`) |
+| 4.5.15+ (Build: 20261030) | OK | 2026-11-04 | + markdown choices, essay template, embedded images |
 | 5.2.4+ (Build: 20261030) | OK | 2026-10-31 | same round-trip test as below + markdown math display (`test_markdown_math_reaches_the_student`) |
 | 4.5.15+ (Build: 20261030) | OK | 2026-10-31 | same round-trip test as below + markdown math display |
 | 5.3+ (Build: 20261013) | OK | 2026-10-20 | same round-trip test as below |

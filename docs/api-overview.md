@@ -138,7 +138,9 @@ schema is documented in `markdown.qmd`; authoring templates live in
    (`utils.base_question(q)` supplies the shared fields).
 2. `_common.to_context` normalizes a `Quiz`, iterable, or single question into a context list.
 3. `_templating.make_env(user_dir, kind)` builds a Jinja2 environment
-   (user templates override packaged ones; filters: `cdata`, `xmlbool`, `numscheme`, `slug`).
+   (user templates override packaged ones; filters: `cdata`, `moodle_text`, `xmlbool`,
+   `numscheme`, `slug`; XML only: `hashed_order` and the global `embed_images`, from
+   `writer/moodle/images.py`, which embed local images as `<file>` elements).
 4. `_quiz.xml.j2` includes `<type>.xml.j2` per question; a parallel `*.html.j2` set renders previews.
 5. `render_xml(obj, *, templates_dir=None) -> bytes`; `write_xml(obj, file, ...) -> Path`;
    `render_html/write_html` likewise.

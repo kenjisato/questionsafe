@@ -1,9 +1,17 @@
 {# Common Jinja macros for Moodle XML templates #}
 
+{% macro files_block(files) -%}
+  {%- for f in files %}
+    <file name="{{ f.name }}" path="/" encoding="base64">{{ f.data }}</file>
+  {%- endfor %}
+{%- endmacro %}
+
 {% macro name_and_stem(n) -%}
+  {%- set t = embed_images(n.stem_text, n.stem_format) %}
   <name><text>{{ n.name | e }}</text></name>
   <questiontext format="{{ n.stem_format | default('html') }}">
-    <text>{{ n.stem_text | moodle_text(n.stem_format) | cdata }}</text>
+    <text>{{ t.text | moodle_text(n.stem_format) | cdata }}</text>
+    {{- files_block(t.files) }}
   </questiontext>
 {%- endmacro %}
 
@@ -30,11 +38,13 @@
   {%- endif -%}
 {%- endmacro %}
 
-{# Answers with plain text content (multichoice/shortanswer) #}
-{% macro answer_text_block(answers) -%}
+{# Answers with text content (multichoice/shortanswer); images only for choices #}
+{% macro answer_text_block(answers, images=False) -%}
   {% for a in answers %}
+  {%- set t = embed_images(a.text, a.answer_format, alt=CHOICE_ALT) if images else none %}
   <answer fraction="{{ a.fraction }}"{% if a.answer_format is defined and a.answer_format %} format="{{ a.answer_format }}"{% endif %}>
-    <text>{{ a.text | moodle_text(a.answer_format) | e }}</text>
+    <text>{{ (t.text if t else a.text) | moodle_text(a.answer_format) | e }}</text>
+    {{- files_block(t.files) if t }}
     {{- feedback_block(a.feedback_text, a.feedback_format) }}
   </answer>
   {%- endfor %}

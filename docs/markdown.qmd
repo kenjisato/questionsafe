@@ -86,6 +86,33 @@ left alone, and `\\(` is a literal `\(`, not math.
 `$...$` is not math: Moodle's MathJax filter does not treat `$` as a delimiter by default.
 Moodle shows the math only with the MathJax filter enabled (it is by default).
 
+## Images
+
+Question text and choices (singlechoice, multichoice, MetaChoice pools) can show local
+images, written as `![alt](path)` or `<img src="path">` (in HTML texts, `<img>` only):
+
+```markdown
+Which shift does the figure show? ![The AS curve](img/as-curve.png)
+
+## /choices
+
+- (x) ![left](img/correct-shift-left.png)
+- ( ) ![right](img/shift-right.png)
+```
+
+- A relative path is relative to the Markdown file. From Python, it is relative to the
+  current directory.
+- Each image is embedded in the Moodle XML under the first 12 hex digits of its content
+  hash (`3f9a1c2b7e4d.png`), so the author's file name never reaches the student.
+- In choices, the alt text becomes `Choice image` and the title is dropped: a descriptive
+  one would give the answer away. The question text keeps the author's alt text.
+- PNG, JPEG, GIF, and WebP only. SVG is an error: its text is visible in the page source.
+  A missing file is an error too.
+- URLs (`https://...`) and images inside code are left alone.
+- With shuffle on, choices are written in an order fixed by a hash of their text, not in
+  the authoring order. Moodle numbers answers in XML order and shows the number in image
+  URLs, so a correct choice written first would otherwise be the lowest number.
+
 ## SingleChoice
 
 Single-answer choice question; exactly one correct answer with fraction=100 and no other positive fractions. Supports choice_layout (labels/shuffle/single_choice), hints, general feedback, tags, id.
