@@ -3,10 +3,26 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal, List
 import copy
+import os
 
 from ..base._text import GraderInfo, Text
 from ..base._types import GraderInfoLike
 from ..base._question import Question
+
+
+def _essay_text(val: Text | str | dict) -> Text:
+    """Coerce a TextLike, {text, format}, or {path} (file read as HTML)."""
+    if isinstance(val, Text):
+        return val
+    if isinstance(val, dict):
+        if "path" not in val:
+            return Text(str(val.get("text", "")), format=str(val.get("format", "html")))
+        p = os.path.expandvars(os.path.expanduser(str(val.get("path") or "").strip()))
+        try:
+            return Text(open(p, encoding="utf-8").read() if p and os.path.exists(p) else "")
+        except Exception:
+            return Text("")
+    return Text(str(val))
 
 
 @dataclass
@@ -28,31 +44,8 @@ class EssayTextArea:
     template: Text | str | dict | None = None
 
     def __post_init__(self) -> None:
-        # Coerce template: TextLike or {path: str}
-        tpl = self.template
-        if tpl is None:
-            return
-        from os import path as _p
-        import os as _os
-        if isinstance(tpl, dict) and "path" in tpl:
-            p = str(tpl.get("path") or "").strip()
-            p = _os.path.expandvars(_os.path.expanduser(p))
-            if p:
-                try:
-                    text = _p.exists(p) and open(p, "r", encoding="utf-8").read() or ""
-                except Exception:
-                    text = ""
-                self.template = Text(text)
-            else:
-                self.template = None
-        elif isinstance(tpl, Text):
-            # leave as-is
-            pass
-        elif isinstance(tpl, str):
-            # treat as inline text (not path) to avoid surprising reads
-            self.template = Text(tpl)
-        else:
-            self.template = Text(str(tpl))
+        if self.template is not None:
+            self.template = _essay_text(self.template)
 
 
 @dataclass
@@ -83,23 +76,8 @@ class Essay(Question):
     def __post_init__(self):  # type: ignore[override]
         # First let base question coerce its own fields
         super().__post_init__()
-        # Coerce graderinfo if provided (TextLike or {path})
         if self.graderinfo is not None:
-            gi = self.graderinfo
-            from os import path as _p
-            import os as _os
-            if isinstance(gi, dict) and "path" in gi:
-                p = str(gi.get("path") or "").strip()
-                p = _os.path.expandvars(_os.path.expanduser(p))
-                data = ""
-                if p:
-                    try:
-                        data = _p.exists(p) and open(p, "r", encoding="utf-8").read() or ""
-                    except Exception:
-                        data = ""
-                self.graderinfo = GraderInfo.from_text(Text(data))
-            else:
-                self.graderinfo = GraderInfo.from_text(gi)
+            self.graderinfo = GraderInfo.from_text(_essay_text(self.graderinfo))
 
     def validate(self) -> None:
         # Validate response settings
@@ -190,52 +168,15 @@ class Essay(Question):
         return self
 
     def set_response_template(self, template: Text | str | dict) -> "Essay":
-        # Accept TextLike or {path}
-        if isinstance(template, dict) and "path" in template:
-            from os import path as _p
-            import os as _os
-            p = str(template.get("path") or "").strip()
-            p = _os.path.expandvars(_os.path.expanduser(p))
-            data = ""
-            if p:
-                try:
-                    data = _p.exists(p) and open(p, "r", encoding="utf-8").read() or ""
-                except Exception:
-                    data = ""
-            self.response.textarea.template = Text(data)
-        else:
-            self.response.textarea.template = (
-                template if isinstance(template, Text) else Text(template)
-            )
+        # Accept TextLike, {text, format}, or {path}
+        self.response.textarea.template = _essay_text(template)
         return self
 
     def set_graderinfo(self, graderinfo: GraderInfoLike | dict | str) -> "Essay":
-        # Accept Text/GraderInfo/str or {path}
-        if isinstance(graderinfo, dict) and "path" in graderinfo:
-            from os import path as _p
-            import os as _os
-            p = str(graderinfo.get("path") or "").strip()
-            p = _os.path.expandvars(_os.path.expanduser(p))
-            data = ""
-            if p:
-                try:
-                    data = _p.exists(p) and open(p, "r", encoding="utf-8").read() or ""
-                except Exception:
-                    data = ""
-            self.graderinfo = GraderInfo.from_text(Text(data))
-        elif isinstance(graderinfo, str):
-            # Expand env vars; if path exists, read file, else treat as literal
-            import os as _os
-            from os import path as _p
-            s = _os.path.expandvars(_os.path.expanduser(graderinfo))
-            if _p.exists(s) and _p.isfile(s):
-                try:
-                    data = open(s, "r", encoding="utf-8").read()
-                except Exception:
-                    data = graderinfo
-                self.graderinfo = GraderInfo.from_text(Text(data))
-            else:
-                self.graderinfo = GraderInfo.from_text(graderinfo)
-        else:
-            self.graderinfo = GraderInfo.from_text(graderinfo)
+        # Accept TextLike, {text, format}, or {path}; a str naming a file is read
+        if isinstance(graderinfo, str):
+            s = os.path.expandvars(os.path.expanduser(graderinfo))
+            if os.path.isfile(s):
+                graderinfo = {"path": s}
+        self.graderinfo = GraderInfo.from_text(_essay_text(graderinfo))
         return self

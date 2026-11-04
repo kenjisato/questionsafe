@@ -57,11 +57,15 @@
   `Text(..., format="markdown")`. A singlechoice checkbox list without exactly one correct
   choice now fails at read time, as the `correct`/`wrong` mapping already did.
   Grader info `{text, format}` in a Markdown file, which raised `TypeError`, now works.
+- Essay response template: `{text, format}` (in Markdown files and from Python) reached the
+  student as the mapping's repr, and a markdown template had its math escaped as in #7, which
+  the student saw, since Moodle pre-fills the answer box with the template unformatted. Both
+  are now written as given.
 - TeX in `format: markdown` texts reached the student broken: Moodle's Markdown
   converter dropped the backslash of `\(` / `\[` and read `*` / `_` inside math as
   emphasis (#7). The Moodle writer now backslash-escapes Markdown specials inside
-  math spans in markdown texts (question text, feedback, hints, essay template and
-  grader info, cloze stem outside the gaps); the format stays `markdown`.
+  math spans in markdown texts (question text, feedback, hints, essay grader info,
+  cloze stem outside the gaps); the format stays `markdown`.
   `Cloze.compile_text(text=None)` takes the template to fill. Verified on Moodle
   4.5 and 5.2 with `format_text()` (`scripts/moodle/format_text.php`).
 - `MetaChoice.generate_singlechoice` / `generate_multichoice` with a `limit` smaller

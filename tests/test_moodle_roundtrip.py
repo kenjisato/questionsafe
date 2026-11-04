@@ -350,3 +350,19 @@ def test_markdown_choices_reach_the_student(tmp_path, container):
     for out in _format_text([{"text": t, "format": f} for f, t in fields], tmp_path, container):
         assert "<strong>bold</strong>" in out and r"\( a*b \)" in out, f"on Moodle {release}: {out!r}"
 
+
+def test_essay_template_reaches_the_student_as_written(tmp_path, container):
+    """Moodle pre-fills the answer box with the template text, unformatted."""
+    from lxml import etree
+
+    from questionsafe import Q, Quiz, Text
+    from questionsafe.writer.moodle import render_xml
+
+    md = r"Intro: **fill** \( a*b \)"
+    q = Q.Essay(name="rt-essay-tpl", questiontext="Explain.").set_response_template(Text(md, format="markdown"))
+    qz = Quiz(category="RT-essay-tpl")
+    qz.add(q)
+
+    theirs, release = _roundtrip(render_xml(qz), tmp_path, container)
+    el = etree.fromstring(theirs).find("question[@type='essay']/responsetemplate")
+    assert (el.get("format"), el.findtext("text")) == ("markdown", md), f"on Moodle {release}"

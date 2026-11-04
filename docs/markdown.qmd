@@ -21,7 +21,7 @@ This document defines the YAML schema used in front matter for writing questions
   inherit this format; `{text, format}` sets it per text. Moodle reads it the same way: an
   answer or feedback without its own format takes the question text's. Not inherited: short
   answer, numerical, and truefalse answers (Moodle stores them as plain text), and the essay
-  response template (Moodle shows it as-is).
+  response template (see Essay).
 - feedback.general: string or {text, format}
 
 ### Hints and penalty (where supported)
@@ -313,6 +313,9 @@ Question prompt
 
 Notes:
 - If textarea.format is "noinline", then attachments.count must be > 0 and attachments.required must be true.
+- The response template is the answer box's initial text. Moodle inserts it as-is: its
+  `format` is not applied, and math in it is not escaped. Write it for textarea.format:
+  HTML for the editor, plain text for plain and monospaced. A plain string has format html.
 - When template is given as { path: "..." } or graderinfo is { path: "..." }, the Reader expands ~, $VAR, and ${VAR} using variables from questionsafe.yml in the current working directory (falling back to environment variables).
 
 ## Description
