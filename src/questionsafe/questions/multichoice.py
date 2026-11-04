@@ -136,7 +136,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     # Verbose new API for manipulating choices
     @safe_api
     def add_choice_correct(
-        self, text: str, feedback: Optional[Feedback | Text | str] = None
+        self, text: Text | str, feedback: Optional[Feedback | Text | str] = None
     ) -> Self:
         """Append a correct choice, recalculating uniform fractions when applicable.
 
@@ -186,7 +186,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     @safe_api
     def add_choice_wrong(
         self,
-        text: str,
+        text: Text | str,
         *,
         fraction: float = 0.0,
         feedback: Optional[Feedback | Text | str] = None,
@@ -204,7 +204,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
 
     @safe_api
     def set_choices_correct(
-        self, *texts: str, feedback: Optional[Feedback | Text | str] = None
+        self, *texts: Text | str, feedback: Optional[Feedback | Text | str] = None
     ) -> Self:
         """Replace only positive-fraction answers with new correct ones splitting 100% evenly.
 
@@ -235,7 +235,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     @safe_api
     def set_choices_wrong(
         self,
-        *texts: str,
+        *texts: Text | str,
         fraction: float = 0.0,
         feedback: Optional[Feedback | Text | str] = None,
     ) -> Self:

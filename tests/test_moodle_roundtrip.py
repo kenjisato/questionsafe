@@ -322,3 +322,31 @@ def test_markdown_math_reaches_the_student(tmp_path, container):
         for tex in MATH:
             assert _norm(tex) in shown, f"{name}/{tag} ({fmt}) on Moodle {release}: {tex!r} not in {shown!r}"
         assert "<em>emphasis</em>" in out
+
+
+def test_markdown_choices_reach_the_student(tmp_path, container):
+    """Choices and their feedback keep format: markdown through import (#8)."""
+    from lxml import etree
+
+    from questionsafe import Q, Quiz, Text
+    from questionsafe.writer.moodle import render_xml
+
+    md = r"**bold** \( a*b \)"
+    q = (
+        Q.MultiChoice(name="rt-md-choices")
+        .set_questiontext(Text("Pick.", format="markdown"))
+        .set_choices_correct(Text(md, format="markdown"), feedback=Text(md, format="markdown"))
+        .set_choices_wrong("B")
+    )
+    qz = Quiz(category="RT-md-choices")
+    qz.add(q)
+
+    theirs, release = _roundtrip(render_xml(qz), tmp_path, container)
+    (answer,) = [
+        a for a in etree.fromstring(theirs).iterfind("question/answer") if a.get("fraction") == "100"
+    ]
+    fields = [(answer.get("format"), answer.findtext("text")), (answer.find("feedback").get("format"), answer.findtext("feedback/text"))]
+    assert [fmt for fmt, _ in fields] == ["markdown", "markdown"], f"on Moodle {release}"
+    for out in _format_text([{"text": t, "format": f} for f, t in fields], tmp_path, container):
+        assert "<strong>bold</strong>" in out and r"\( a*b \)" in out, f"on Moodle {release}: {out!r}"
+

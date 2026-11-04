@@ -69,13 +69,13 @@ def _coffee_python_equivalent(source: str):
     mc = MetaChoice(name="Econ/ShiftOrMove", source=source)
     mc.set_choices(
         {
-            "INCOME": "A rise in consumer income",
-            "TASTES": "A shift in consumer tastes toward coffee",
-            "SUBST": "An increase in the price of tea",
-            "TECH": "An improvement in roasting technology",
-            "INPUT": "A fall in the price of raw coffee beans",
-            "WEATHER": "A frost that destroys part of the harvest",
-            "PRICE": "A change in the market price of coffee",
+            "INCOME": Text("A rise in consumer income", format="markdown"),
+            "TASTES": Text("A shift in consumer tastes toward coffee", format="markdown"),
+            "SUBST": Text("An increase in the price of tea", format="markdown"),
+            "TECH": Text("An improvement in roasting technology", format="markdown"),
+            "INPUT": Text("A fall in the price of raw coffee beans", format="markdown"),
+            "WEATHER": Text("A frost that destroys part of the harvest", format="markdown"),
+            "PRICE": Text("A change in the market price of coffee", format="markdown"),
             "EXPECT": Text("News that coffee prices will rise **sharply** next month", format="markdown"),
         }
     )

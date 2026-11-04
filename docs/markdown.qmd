@@ -16,7 +16,12 @@ This document defines the YAML schema used in front matter for writing questions
 - defaultgrade: float
 - tags: list[str]
 - id: string
-- questiontext_format or format: string (default: markdown)
+- questiontext_format or format: string (default: markdown). Plain-string choices
+  (singlechoice, multichoice, MetaChoice), stems, feedback, hints, and essay grader info
+  inherit this format; `{text, format}` sets it per text. Moodle reads it the same way: an
+  answer or feedback without its own format takes the question text's. Not inherited: short
+  answer, numerical, and truefalse answers (Moodle stores them as plain text), and the essay
+  response template (Moodle shows it as-is).
 - feedback.general: string or {text, format}
 
 ### Hints and penalty (where supported)

@@ -51,21 +51,26 @@ def _expand_with_vars(s: str, vars_map: dict) -> str:
 
     return pattern.sub(repl, s2)
 
-def _coerce_text_like(val: Any, *, default_format: str = "markdown") -> Text | str | None:
+def _text_format(meta: Dict[str, Any]) -> str:
+    """The file's text format: every text without its own format inherits it."""
+    return str(meta.get("questiontext_format") or meta.get("format") or "markdown")
+
+
+def _coerce_text_like(val: Any, fmt: str) -> Text | None:
     if val is None:
         return None
     if isinstance(val, Text):
         return val
     if isinstance(val, dict):
-        return Text(str(val.get("text", "")), format=str(val.get("format", default_format)))
-    return str(val)
+        return Text(str(val.get("text", "")), format=str(val.get("format", fmt)))
+    return Text(str(val), format=fmt)
 
 
-def _apply_question_common(q: Any, meta: Dict[str, Any], body: str, *, default_format: str = "markdown") -> None:
+def _apply_question_common(q: Any, meta: Dict[str, Any], body: str) -> None:
+    fmt = _text_format(meta)
     # questiontext from body (if non-empty)
     bt = (body or "").strip()
     if bt:
-        fmt = str(meta.get("questiontext_format") or meta.get("format") or default_format)
         q.ask(Text(bt, format=fmt))
     # defaultgrade
     if "defaultgrade" in meta:
@@ -76,7 +81,7 @@ def _apply_question_common(q: Any, meta: Dict[str, Any], body: str, *, default_f
     # general feedback
     fb_meta = meta.get("feedback") or {}
     if isinstance(fb_meta, dict) and "general" in fb_meta:
-        q.set_feedback_general(_coerce_text_like(fb_meta.get("general")))
+        q.set_feedback_general(_coerce_text_like(fb_meta.get("general"), fmt))
     # tags
     tags_raw = meta.get("tags")
     if isinstance(tags_raw, (list, tuple)) and len(tags_raw) > 0:
@@ -98,7 +103,9 @@ def _apply_question_common(q: Any, meta: Dict[str, Any], body: str, *, default_f
             from ..questions import SingleChoice as _SC, TrueFalse as _TF, MultiChoice as _MC, ShortAnswer as _SA
             # Only apply for text-answer based question types
             if isinstance(q, (_SC, _TF, _MC, _SA)):
-                answers_list = _parse_text_answers(answers_meta)
+                # Choice texts are formatted text; other answers are matched as plain strings
+                answer_fmt = fmt if isinstance(q, (_SC, _MC)) else None
+                answers_list = _parse_text_answers(answers_meta, fmt, answer_fmt)
                 if answers_list:
                     q.set_answers(*answers_list)  # type: ignore[call-arg]
         except Exception:
@@ -106,11 +113,11 @@ def _apply_question_common(q: Any, meta: Dict[str, Any], body: str, *, default_f
             pass
 
     # apply mixin-based configuration if supported
-    _apply_multitry_common(q, meta)
-    _apply_combined_feedback_common(q, meta)
+    _apply_multitry_common(q, meta, fmt)
+    _apply_combined_feedback_common(q, meta, fmt)
 
 
-def _apply_multitry_common(q: Any, meta: Dict[str, Any]) -> None:
+def _apply_multitry_common(q: Any, meta: Dict[str, Any], fmt: str) -> None:
     # Only apply when the object supports MultiTry and has_hints is enabled
     if not isinstance(q, MultiTryMixin):
         return
@@ -126,7 +133,7 @@ def _apply_multitry_common(q: Any, meta: Dict[str, Any]) -> None:
     parsed: list[Any] = []
     if isinstance(hints_meta, (list, tuple)):
         for h in hints_meta:
-            parsed.append(_coerce_text_like(h))
+            parsed.append(_coerce_text_like(h, fmt))
     try:
         if parsed and penalty is None:
             q.set_hints(*parsed)
@@ -138,7 +145,7 @@ def _apply_multitry_common(q: Any, meta: Dict[str, Any]) -> None:
         pass
 
 
-def _apply_combined_feedback_common(q: Any, meta: Dict[str, Any]) -> None:
+def _apply_combined_feedback_common(q: Any, meta: Dict[str, Any], fmt: str) -> None:
     fb_meta = meta.get("feedback") or {}
     if not isinstance(fb_meta, dict):
         return
@@ -152,7 +159,7 @@ def _apply_combined_feedback_common(q: Any, meta: Dict[str, Any]) -> None:
     kwargs: Dict[str, Any] = {}
     for key in ("correct", "partiallycorrect", "incorrect"):
         if key in fb_meta:
-            kwargs[key] = _coerce_text_like(fb_meta.get(key))
+            kwargs[key] = _coerce_text_like(fb_meta.get(key), fmt)
     if not kwargs:
         return
     try:
@@ -166,7 +173,7 @@ def _apply_combined_feedback_common(q: Any, meta: Dict[str, Any]) -> None:
             q.set_feedback_incorrect(kwargs["incorrect"])  # type: ignore[arg-type]
 
 
-def _parse_text_answers(answers_meta: Any) -> list:
+def _parse_text_answers(answers_meta: Any, fmt: str, answer_fmt: str | None) -> list:
     """Parse a list of text answers from front matter answers.
 
     Each item may be:
@@ -186,13 +193,15 @@ def _parse_text_answers(answers_meta: Any) -> list:
                 frac = float(item.get("fraction", 0.0))
             except Exception:
                 frac = 0.0
-            fb_val = _coerce_text_like(item.get("feedback"))
-            results.append(Answer.from_text(txt, fraction=frac, feedback=fb_val))
+            fb_val = _coerce_text_like(item.get("feedback"), fmt)
+            text = txt if answer_fmt is None else Text(txt, format=answer_fmt)
+            results.append(Answer.from_text(text, fraction=frac, feedback=fb_val))
         else:
             # fallback: treat as string
             txt = str(item)
             if txt.strip():
-                results.append(Answer.from_text(txt, fraction=0.0))
+                text = txt if answer_fmt is None else Text(txt, format=answer_fmt)
+                results.append(Answer.from_text(text, fraction=0.0))
     return results
 
 
@@ -261,17 +270,16 @@ _MC_FENCE_CLOSE = re.compile(r"^```\s*$")
 _MC_CONSTRAINT_KEYS = {"members", "min", "max", "apply_to"}
 
 
-def _parse_mc_text_map(meta: Dict[str, Any], key: str) -> Dict[str, Text | str]:
+def _parse_mc_text_map(meta: Dict[str, Any], key: str) -> Dict[str, Text]:
     raw = meta.get(key)
     if not isinstance(raw, dict) or not raw:
         raise ValueError(f"metachoice front matter must include a non-empty '{key}' mapping")
-    out: Dict[str, Text | str] = {}
+    out: Dict[str, Text] = {}
     for k, v in raw.items():
-        text = _coerce_text_like(v, default_format="markdown")
-        raw_text = text.text if isinstance(text, Text) else ("" if text is None else text)
-        if not raw_text.strip():
+        text = _coerce_text_like(v, _text_format(meta))
+        if text is None or not text.text.strip():
             raise ValueError(f"{key} entry '{k}' has empty text")
-        out[str(k)] = text  # type: ignore[assignment]
+        out[str(k)] = text
     return out
 
 
@@ -621,38 +629,12 @@ class Reader:
         # Common properties and full-form answers (handled in _apply_question_common)
         _apply_question_common(q, meta, body)
 
-        # If shorthand choices are provided (and no full-form answers), apply them
-        if meta.get("choices") and not meta.get("answers"):
-            ch = meta.get("choices")
-            if isinstance(ch, list):
-                parsed = self._choices_checkbox(ch)
-                if parsed is not None:
-                    checks, labels = parsed
-                    correct = [lbl for lbl, c in zip(labels, checks) if c]
-                    wrong = [lbl for lbl, c in zip(labels, checks) if not c]
-                    if correct:
-                        q.set_choices_correct(*correct)
-                    else:
-                        # No checked -> clear positives; let validate() decide
-                        q.set_choices_correct()
-                    if wrong:
-                        q.set_choices_wrong(*wrong)
-                else:
-                    correct, wrong = self._choices(meta)
-                    if len(correct) != 1:
-                        raise ValueError(
-                            "singlechoice expects exactly one correct choice; found "
-                            f"{len(correct)}"
-                        )
-                    q.set_choice_correct(correct[0]).set_choices_wrong(*wrong)
-            else:
-                correct, wrong = self._choices(meta)
-                if len(correct) != 1:
-                    raise ValueError(
-                        "singlechoice expects exactly one correct choice; found "
-                        f"{len(correct)}"
-                    )
-                q.set_choice_correct(correct[0]).set_choices_wrong(*wrong)
+        choices = self._shorthand_choices(meta)
+        if choices is not None:
+            correct, wrong = choices
+            if len(correct) != 1:
+                raise ValueError(f"singlechoice expects exactly one correct choice; found {len(correct)}")
+            q.set_choice_correct(correct[0]).set_choices_wrong(*wrong)
 
         # choice_layout (new API)
         layout = meta.get("choice_layout") or {}
@@ -680,40 +662,12 @@ class Reader:
         # Common properties and full-form answers (handled in _apply_question_common)
         _apply_question_common(q, meta, body)
 
-        # If shorthand choices are provided (and no full-form answers), apply them
-        if meta.get("choices") and not meta.get("answers"):
-            ch = meta.get("choices")
-            if isinstance(ch, list):
-                parsed = self._choices_checkbox(ch)
-                if parsed is not None:
-                    checks, labels = parsed
-                    correct = [lbl for lbl, c in zip(labels, checks) if c]
-                    wrong = [lbl for lbl, c in zip(labels, checks) if not c]
-                    if correct:
-                        q.set_choices_correct(*correct)
-                    else:
-                        # Clear positives explicitly if empty list
-                        q.set_choices_correct()
-                    if wrong:
-                        q.set_choices_wrong(*wrong)
-                else:
-                    correct, wrong = self._choices(meta)
-                    if correct:
-                        q.set_choices_correct(*correct)
-                    else:
-                        # Explicitly clear positives if requested with empty correct list
-                        q.set_choices_correct()
-                    if wrong:
-                        q.set_choices_wrong(*wrong)
-            else:
-                correct, wrong = self._choices(meta)
-                if correct:
-                    q.set_choices_correct(*correct)
-                else:
-                    # Explicitly clear positives if requested with empty correct list
-                    q.set_choices_correct()
-                if wrong:
-                    q.set_choices_wrong(*wrong)
+        choices = self._shorthand_choices(meta)
+        if choices is not None:
+            correct, wrong = choices
+            q.set_choices_correct(*correct)  # no texts clears the positives; validate() decides
+            if wrong:
+                q.set_choices_wrong(*wrong)
 
         # choice_layout (new API)
         layout = meta.get("choice_layout") or {}
@@ -844,10 +798,12 @@ class Reader:
             if isinstance(gi, dict) and "path" in gi:
                 p = _expand_with_vars(str(gi.get("path") or ""), getattr(self, "_project_vars", {}))
                 q.set_graderinfo({"path": p})
-            elif isinstance(gi, str):
-                q.set_graderinfo(_expand_with_vars(gi, getattr(self, "_project_vars", {})))
+            elif isinstance(gi, str) and os.path.isfile(
+                s := _expand_with_vars(gi, getattr(self, "_project_vars", {}))
+            ):
+                q.set_graderinfo(s)
             else:
-                q.set_graderinfo(gi)
+                q.set_graderinfo(_coerce_text_like(gi, _text_format(meta)))
         return q
 
     def _build_description(self, meta: Dict[str, Any], body: str) -> Q.Description:  # type: ignore[return-value]
@@ -1009,6 +965,21 @@ class Reader:
         if not isinstance(name, str) or not name.strip():
             raise ValueError("front matter must include 'name' as a non-empty string")
         return name
+
+    def _shorthand_choices(self, meta: Dict[str, Any]) -> Tuple[list[Text], list[Text]] | None:
+        """Front matter `choices` (checkbox list or correct/wrong mapping) in the file's format."""
+        ch = meta.get("choices")
+        if not ch or meta.get("answers"):
+            return None
+        parsed = self._choices_checkbox(ch) if isinstance(ch, list) else None
+        if parsed is not None:
+            checks, labels = parsed
+            correct = [lbl for lbl, c in zip(labels, checks) if c]
+            wrong = [lbl for lbl, c in zip(labels, checks) if not c]
+        else:
+            correct, wrong = self._choices(meta)
+        fmt = _text_format(meta)
+        return [Text(t, format=fmt) for t in correct], [Text(t, format=fmt) for t in wrong]
 
     @staticmethod
     def _choices_checkbox(choices_list: list) -> Tuple[list[bool], list[str]] | None:

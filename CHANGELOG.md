@@ -46,6 +46,17 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- Choices and feedback were written as `format="html"` whatever the author wrote, so
+  Markdown in them was shown literally (#8). The Markdown reader now gives every plain-string
+  text (choices, answer and combined feedback, hints, essay grader info, MetaChoice choices
+  and stems) the file's format (`format` / `questiontext_format`, default `markdown`), and
+  the multichoice writer emits each choice's own format. `SingleChoice.set_choice_correct` /
+  `add_choice_correct` and the `MultiChoice` choice setters accept `Text` to set it from
+  Python. Math in markdown choices is escaped as in #7. Questions read from Markdown files
+  now compare equal to Python-built ones only when the choices are given as
+  `Text(..., format="markdown")`. A singlechoice checkbox list without exactly one correct
+  choice now fails at read time, as the `correct`/`wrong` mapping already did.
+  Grader info `{text, format}` in a Markdown file, which raised `TypeError`, now works.
 - TeX in `format: markdown` texts reached the student broken: Moodle's Markdown
   converter dropped the backslash of `\(` / `\[` and read `*` / `_` inside math as
   emphasis (#7). The Moodle writer now backslash-escapes Markdown specials inside

@@ -15,7 +15,7 @@ def _(q: MultiChoice):
                 {
                     "text": a.text,
                     "fraction": a.fraction,
-                    "answer_format": "html",
+                    "answer_format": a.format,
                     "feedback_text": rt_text(a.feedback),
                     "feedback_format": rt_format(a.feedback),
                 }

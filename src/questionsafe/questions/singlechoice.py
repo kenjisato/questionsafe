@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from typing import Optional, Self, Literal
 
 from .multichoice import MultiChoice
-from ..base._types import FeedbackLike
+from ..base._text import Text
+from ..base._types import FeedbackLike, TextLike
 from ..base._answer import Answer
 from ._cloze_embed import ClozeEmbeddable
 from ..base._safe import safe_api
@@ -45,25 +46,30 @@ class SingleChoice(MultiChoice, ClozeEmbeddable):
 
     @safe_api
     def set_choice_correct(
-        self, text: str, feedback: Optional[FeedbackLike] = None
+        self, text: TextLike, feedback: Optional[FeedbackLike] = None
     ) -> Self:
         """Set exactly one correct answer (fraction=100), replacing any existing corrects.
 
         Keeps existing wrong/neutral answers (fraction <= 0). If a wrong with the same text
         exists, it is removed to avoid duplicate labels.
         """
-        t = text.strip()
+        if isinstance(text, Text):
+            text = Text(text.text.strip(), format=text.format)
+        else:
+            text = text.strip()
+        new_correct = Answer.from_text(text, fraction=100, feedback=feedback)
         # Keep only non-positive answers with different text to avoid duplicates
         keep = [
-            a for a in self.answers if float(getattr(a, "fraction", 0.0)) <= 0 and a.text.strip() != t
+            a
+            for a in self.answers
+            if float(getattr(a, "fraction", 0.0)) <= 0 and a.text.strip() != new_correct.text
         ]
-        new_correct = Answer.from_text(t, fraction=100, feedback=feedback)
         self.answers = keep + [new_correct]
         return self
 
     # Guard colorful API: prevent adding multiple corrects via add_choice_correct
     @safe_api
-    def add_choice_correct(self, text: str, feedback: Optional[FeedbackLike] = None) -> Self:
+    def add_choice_correct(self, text: TextLike, feedback: Optional[FeedbackLike] = None) -> Self:
         if any(abs(float(getattr(a, "fraction", 0.0)) - 100.0) <= 1e-6 for a in self.answers):
             raise ValueError(
                 "SingleChoice already has a correct answer (fraction=100). Use add_answer() for advanced usage."

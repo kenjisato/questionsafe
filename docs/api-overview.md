@@ -40,7 +40,7 @@ choice types mix in `CombinedFeedbackMixin` (`set_feedback_correct/partiallycorr
 
 | Class | Moodle XML type | Notable methods |
 |---|---|---|
-| `Q.MultiChoice` | `multichoice` | `set_choices_correct/wrong`, `add_choice_correct/wrong`, `set_scoring` (safe), `set_single_choice`, `set_labels`, `set_choice_layout`, `set_shuffle`, `.cloze()` |
+| `Q.MultiChoice` | `multichoice` | `set_choices_correct/wrong`, `add_choice_correct/wrong` (choices: `str` = HTML, or `Text`), `set_scoring` (safe), `set_single_choice`, `set_labels`, `set_choice_layout`, `set_shuffle`, `.cloze()` |
 | `Q.SingleChoice` | `multichoice` with `<single>true</single>` | `set_choice_correct` (safe), guarded `add_choice_correct`, `.cloze()` |
 | `Q.TrueFalse` | `truefalse` | `set_correct_if_true/false` (safe) |
 | `Q.Numerical` | `numerical` | `add_answer(answer, tolerance, ...)`, `add_units`/`set_units`, `set_unit_options`, `.cloze()` |

@@ -34,8 +34,8 @@ def test_multichoice_checkbox_choices(tmp_path):
     q_py = (
         Q.MultiChoice("MC/Checkbox")
         .ask(Text("Body", format="markdown"))
-        .set_choices_correct("A", "B")
-        .set_choices_wrong("X", "Y")
+        .set_choices_correct(Text("A", format="markdown"), Text("B", format="markdown"))
+        .set_choices_wrong(Text("X", format="markdown"), Text("Y", format="markdown"))
     )
     assert q == q_py
 
@@ -64,8 +64,8 @@ def test_singlechoice_checkbox_choices(tmp_path):
     q_py = (
         Q.SingleChoice("SC/Checkbox")
         .ask(Text("Body", format="markdown"))
-        .set_choice_correct("A")
-        .set_choices_wrong("B", "C")
+        .set_choice_correct(Text("A", format="markdown"))
+        .set_choices_wrong(Text("B", format="markdown"), Text("C", format="markdown"))
     )
     assert q == q_py
 
@@ -115,6 +115,6 @@ def test_question_wrapper_mapping(tmp_path):
     )
 
     q = Reader(p).read()
-    q_py = Q.SingleChoice("Wrapped").ask(Text("Body", format="markdown")).set_choice_correct("A").set_choices_wrong("B")
+    q_py = Q.SingleChoice("Wrapped").ask(Text("Body", format="markdown")).set_choice_correct(Text("A", format="markdown")).set_choices_wrong(Text("B", format="markdown"))
     assert q == q_py
 

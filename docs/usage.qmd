@@ -64,6 +64,7 @@ You can set the `questiontext` attribute with more expressive `ask` method.
 ```
 
 Note:
+- Choice texts may be `Text` values to set their format, e.g. `set_choice_correct(Text("**A**", format="markdown"))`; plain strings are HTML.
 - SingleChoice.add_choice_correct is guarded to prevent adding multiple correct choices via the colorful API. If you need advanced control, use add_answer or set_answers. Validation still requires exactly one correct (fraction=100).
 
 ```{python}

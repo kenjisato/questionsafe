@@ -68,8 +68,8 @@ def test_reader_multichoice_choices(tmp_path):
     q_py = (
         Q.MultiChoice(name="Capitals/EU")
         .ask(Text("Pick EU capitals", format="markdown"))
-        .set_choices_correct("Paris", "Berlin")
-        .set_choices_wrong("Madrid", "Zurich")
+        .set_choices_correct(Text("Paris", format="markdown"), Text("Berlin", format="markdown"))
+        .set_choices_wrong(Text("Madrid", format="markdown"), Text("Zurich", format="markdown"))
         .set_labels("ABCD")
         .set_shuffle(False)
         .set_tags("EU")

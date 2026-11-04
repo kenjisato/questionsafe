@@ -34,8 +34,8 @@ def test_singlechoice_choices_section(tmp_path):
     want = (
         Q.SingleChoice("AS")
         .ask(Text("Which statement is correct?", format="markdown"))
-        .set_choice_correct("A")
-        .set_choices_wrong("B", "C")
+        .set_choice_correct(Text("A", format="markdown"))
+        .set_choices_wrong(Text("B", format="markdown"), Text("C", format="markdown"))
     )
     assert Reader(p).read() == want
 
@@ -60,8 +60,8 @@ def test_multichoice_choices_section_any_heading_level(tmp_path):
     want = (
         Q.MultiChoice("MC")
         .ask(Text("Body", format="markdown"))
-        .set_choices_correct("A", "B")
-        .set_choices_wrong("X")
+        .set_choices_correct(Text("A", format="markdown"), Text("B", format="markdown"))
+        .set_choices_wrong(Text("X", format="markdown"))
     )
     assert Reader(p).read() == want
 
@@ -244,8 +244,8 @@ def test_choices_section_accepts_o_as_correct(tmp_path):
     want = (
         Q.MultiChoice("O")
         .ask(Text("Body", format="markdown"))
-        .set_choices_correct("A", "B")
-        .set_choices_wrong("X")
+        .set_choices_correct(Text("A", format="markdown"), Text("B", format="markdown"))
+        .set_choices_wrong(Text("X", format="markdown"))
     )
     assert Reader(p).read() == want
 

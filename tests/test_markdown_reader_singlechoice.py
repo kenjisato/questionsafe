@@ -45,8 +45,8 @@ def test_reader_singlechoice_file(tmp_path):
     q_py = (
         Q.SingleChoice(name="Japan/Capital")
         .ask(Text("What is the capital of Japan?", format="markdown"))
-        .set_choice_correct("Tokyo")
-        .set_choices_wrong("Osaka", "Kyoto", "Kanagawa")
+        .set_choice_correct(Text("Tokyo", format="markdown"))
+        .set_choices_wrong(Text("Osaka", format="markdown"), Text("Kyoto", format="markdown"), Text("Kanagawa", format="markdown"))
         .set_tags("Japan")
     )
     assert q_py == q
