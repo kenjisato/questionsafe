@@ -16,7 +16,7 @@ from questionsafe import Q, Quiz, Reader
 md = Path(__file__).parent / "markdown" / "metachoice.md"
 mc = Reader(md).read_metachoice()
 
-proto = Q.MultiChoice().set_choice_layout(labels="none", shuffle=False)
+proto = Q.MultiChoice().set_choice_layout(numbering="none", shuffle=False)
 group = mc.generate_multichoice(n=4, limit=2, seed=42, prototype=proto)
 group.assign_idnumbers(prefix="econ-")
 

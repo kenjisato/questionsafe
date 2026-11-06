@@ -53,6 +53,10 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- The Markdown reader ignored the documented full-form keys `answernumbering`,
+  `shuffleanswers` and `single`, and swallowed errors in `choice_layout:` (#11). They are
+  now read; giving a key and its `choice_layout:` counterpart is an error, and so is an
+  unknown `choice_layout:` key.
 - `MultiChoice` with `set_single_choice()` accepts partial credit as Moodle does (#13):
   one answer at 100% is required and the sum of positive fractions is no longer checked
   (e.g. 100/50/0 used to fail with "Sum of positive fractions must be 100").
@@ -93,6 +97,11 @@
   fractions rejected by `validate()`, violating the safe-API contract.
 
 ### Changed
+- Choice numbering defaults to `abc`, Moodle's default (#11); it was `none`. Questions
+  that never set it now show a./b./c. in Moodle. Set `numbering: none` (or
+  `set_numbering("none")`) to keep the old look.
+- `labels` is renamed `numbering` (#11): the `MultiChoice.numbering` attribute,
+  `set_numbering()`, `set_choice_layout(numbering=...)` and `choice_layout: {numbering: ...}`.
 - MultiChoice API overhauled for clarity and EAFP-friendly usage:
   - Added verbose methods:
     - add_choice_correct(text, feedback=None) — appends a 100% correct choice
@@ -106,6 +115,11 @@
   - Provides set_correct("true"|"false", feedback=None) and set_wrong("true"|"false", feedback=None).
   - Internally uses MultiChoice add_choice_*.
   - Current semantics: subsequent calls overwrite (do not preserve previous feedback unless explicitly provided).
+
+### Deprecated
+- `labels` (#11): `MultiChoice.labels`, `set_labels()` and `set_choice_layout(labels=...)`
+  still work and emit a `DeprecationWarning`; `choice_layout: {labels: ...}` in Markdown
+  emits a `FutureWarning`, which is shown by default. They will be removed in a later release.
 
 ### Removed
 - `randomize_branch` on `MetaChoice.generate_*` and `constrained_subsets`; the

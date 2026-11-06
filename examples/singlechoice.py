@@ -6,7 +6,7 @@ mcq = (
     )
     .set_choice_correct("Bangkok")
     .set_choices_wrong("Chiang Mai", "Phuket", "Pattaya")
-    .set_labels("abc")
+    .set_numbering("abc")
 )
 
 quiz = Quiz([mcq])

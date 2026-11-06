@@ -439,7 +439,7 @@ class MetaChoice:
               If an int, exactly that many corrects.
               If a (min,max) tuple, range of allowed corrects, inclusive.
               If None, use the bounds from the defined "__correct__" group.
-        - prototype: an optional MultiChoice with desired defaults (e.g., shuffle, labels,
+        - prototype: an optional MultiChoice with desired defaults (e.g., shuffle, numbering,
               combined feedback). It is deep-copied per variant; answers are replaced.
         """
         bounds: Optional[tuple[int, int]]

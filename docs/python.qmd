@@ -257,7 +257,7 @@ Tip: In many IDEs, safe methods are also prefixed with "[SAFE]" in the tooltip s
 - Common to all questions: set_name, set_questiontext/ask, set_feedback_general, set_defaultgrade, set_tags/add_tag, set_idnumber
 - Hints and penalties: add_hint, set_hints (penalty can be "auto"), set_penalty
 - Combined feedback: set_combined_feedback, set_feedback_correct/partiallycorrect/incorrect
-- MultiChoice: set_numbering, set_shuffle, set_single, set_choice_correct, set_choices_wrong, set_answers
+- MultiChoice: set_numbering, set_shuffle, set_single_choice, set_choice_correct, set_choices_wrong, set_answers
 - TrueFalse: set_choice_correct, set_choice_wrong
 - ShortAnswer: set_usecase, set_answers, add_answer
 - Numerical: set_answers, set_units/add_units

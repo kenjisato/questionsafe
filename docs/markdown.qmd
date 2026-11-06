@@ -113,9 +113,24 @@ Which shift does the figure show? ![The AS curve](img/as-curve.png)
   the authoring order. Moodle numbers answers in XML order and shows the number in image
   URLs, so a correct choice written first would otherwise be the lowest number.
 
+## Choice layout
+
+singlechoice and multichoice take the layout settings either under `choice_layout:` or as
+top-level keys named as in Moodle XML. Giving both names for one setting is an error.
+
+| `choice_layout:` | Moodle XML key | Moodle edit form | Values | Default |
+|---|---|---|---|---|
+| `numbering` | `answernumbering` | Number the choices? | `abc`, `ABCD`, `123`, `iii`, `III`, `none` | `abc` |
+| `shuffle` | `shuffleanswers` | Shuffle the choices? | bool | true |
+| `single_choice` | `single` | One or multiple answers? | bool | true for singlechoice, false for multichoice |
+
+The defaults are Moodle's. `choice_layout: {labels: ...}` is a deprecated name for `numbering`.
+The Python API uses the same names: `set_numbering`, `set_shuffle`, `set_single_choice`,
+`set_choice_layout(numbering=..., shuffle=..., single_choice=...)`.
+
 ## SingleChoice
 
-Single-answer choice question; exactly one correct answer with fraction=100 and no other positive fractions. Supports choice_layout (labels/shuffle/single_choice), hints, general feedback, tags, id.
+Single-answer choice question; exactly one correct answer with fraction=100 and no other positive fractions. Supports choice_layout (numbering/shuffle/single_choice), hints, general feedback, tags, id.
 
 Unsupported: combined feedback (correct/partiallycorrect/incorrect) — ignored with a warning.
 
@@ -129,7 +144,7 @@ choices:
   correct: [str]    # exactly one
   wrong: [str, ...]
 choice_layout:
-  labels: abc|ABCD|123|iii|III|none
+  numbering: abc|ABCD|123|iii|III|none  # default abc
   shuffle: bool
 tags: [str, ...]
 id: str
@@ -164,7 +179,7 @@ Question stem in Markdown
 
 ## MultiChoice
 
-Multiple-choice (checkbox or single radio UI). With checkboxes, positive fractions must sum to 100; with `single_choice: true`, one answer must be 100 and others may give partial credit. Supports choice_layout (labels/shuffle/single_choice), hints, general and combined feedback.
+Multiple-choice (checkbox or single radio UI). With checkboxes, positive fractions must sum to 100; with `single_choice: true`, one answer must be 100 and others may give partial credit. Supports choice_layout (numbering/shuffle/single_choice), hints, general and combined feedback.
 
 ### Short-hand
 
@@ -176,7 +191,7 @@ choices:
   correct: [str, ...]    # uniformly split to sum 100
   wrong: [str, ...]
 choice_layout:
-  labels: abc|ABCD|123|iii|III|none
+  numbering: abc|ABCD|123|iii|III|none  # default abc
   shuffle: bool
   single_choice: bool  # default false
 hints:

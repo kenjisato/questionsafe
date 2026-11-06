@@ -83,7 +83,7 @@ embed_example(Quiz([_]))
      .ask("Pick all that apply")
      .set_choices_correct("A", "B")  # single/multiple correct choices
      .set_choices_wrong("C", "D")    # multiple wrong choices
-     .set_numbering("123")           # abc, ABC, 123, iii, III or none
+     .set_numbering("123")           # abc, ABCD, 123, iii, III or none
 )
 ```
 
@@ -423,8 +423,8 @@ uv run questionsafe create questions/q1.md --name "Sample/SC" --type singlechoic
 #| echo: true
 from questionsafe import Q, Reader
 # Build sub-questions
-sc = Reader("schoice.md").read().set_name("gap1")
-mc = Reader("mchoice.md").read().set_name("gap2")
+sc = Reader("../examples/markdown/schoice.md").read().set_name("gap1")
+mc = Reader("../examples/markdown/mchoice.md").read().set_name("gap2")
 # Embed into a Cloze stem
 clz = (
   Q.Cloze("Japan/Cities")

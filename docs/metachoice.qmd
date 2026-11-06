@@ -132,7 +132,7 @@ Answers are always listed in the registered pool order for stability
 
 ## Using a prototype question for defaults
 
-Pass a prototype `MultiChoice` or `SingleChoice` to set defaults such as labels, shuffle,
+Pass a prototype `MultiChoice` or `SingleChoice` to set defaults such as numbering, shuffle,
 or combined feedback. The generator deep-copies the prototype per variant and replaces
 only the name, question text, and answers.
 
@@ -140,9 +140,9 @@ only the name, question text, and answers.
 #| echo: true
 from questionsafe import Q
 
-proto = Q.MultiChoice().set_choice_layout(labels="abc", shuffle=False)
+proto = Q.MultiChoice().set_choice_layout(numbering="abc", shuffle=False)
 grp = mc.generate_multichoice(n=3, limit=1, seed=7, prototype=proto)
-(grp.variants[0].labels, grp.variants[0].shuffle)
+(grp.variants[0].numbering, grp.variants[0].shuffle)
 ```
 
 ## Authoring in Markdown

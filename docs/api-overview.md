@@ -40,7 +40,7 @@ choice types mix in `CombinedFeedbackMixin` (`set_feedback_correct/partiallycorr
 
 | Class | Moodle XML type | Notable methods |
 |---|---|---|
-| `Q.MultiChoice` | `multichoice` | `set_choices_correct/wrong`, `add_choice_correct/wrong` (choices: `str` = HTML, or `Text`), `set_scoring` (safe), `set_single_choice`, `set_labels`, `set_choice_layout`, `set_shuffle`, `.cloze()` |
+| `Q.MultiChoice` | `multichoice` | `set_choices_correct/wrong`, `add_choice_correct/wrong` (choices: `str` = HTML, or `Text`), `set_scoring` (safe), `set_single_choice`, `set_numbering`, `set_choice_layout`, `set_shuffle`, `.cloze()` |
 | `Q.SingleChoice` | `multichoice` with `<single>true</single>` | `set_choice_correct` (safe), guarded `add_choice_correct`, `.cloze()` |
 | `Q.TrueFalse` | `truefalse` | `set_correct_if_true/false` (safe) |
 | `Q.Numerical` | `numerical` | `add_answer(answer, tolerance, ...)`, `add_units`/`set_units`, `set_unit_options`, `.cloze()` |
@@ -109,7 +109,7 @@ group2 = mc.generate_singlechoice(n=4, limit=3, seed=42)  # forces exactly one c
 - Variants spread over the pool: each is the first feasible, not yet generated subset
   with the least-used choices ranked first (`seed` breaks ties).
 - `prototype` is a question deep-copied per variant to carry defaults
-  (shuffle, labels, combined feedback); its answers are replaced.
+  (shuffle, numbering, combined feedback); its answers are replaced.
 - Sampling is a DFS over subsets (`base._choice_sampling.constrained_subsets`) with
   per-stem seeds derived from `seed`.
 - `Stem.set_choices_excluded(keys)` mirrors `set_choices_correct`; `add_stem(exclude=...)`

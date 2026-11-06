@@ -1,5 +1,6 @@
 # multiplechoice.py
 from __future__ import annotations
+import warnings
 from dataclasses import dataclass, field
 from typing import List, Optional, Self, Literal
 
@@ -34,10 +35,14 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         Choice options with grading fractions and optional feedback.
     - single_choice: bool
         True for single-answer mode (radio-button UI); False to allow multiple answers.
+        Moodle XML `<single>`; edit form "One or multiple answers?".
     - shuffle: bool
         Shuffle the order of answers when presented.
-    - labels: AnsNumbering
-        One of 'abc' | 'ABCD' | '123' | 'iii' | 'III' | 'none'.
+        Moodle XML `<shuffleanswers>`; edit form "Shuffle the choices?".
+    - numbering: AnsNumbering
+        One of 'abc' | 'ABCD' | '123' | 'iii' | 'III' | 'none'; default 'abc', as in Moodle.
+        Moodle XML `<answernumbering>`; edit form "Number the choices?".
+        (`labels` is a deprecated alias.)
     - combined: CombinedFeedback
         Optional combined feedback shown after answering.
     - qtype: str
@@ -47,7 +52,7 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     answers: List[TextAnswer] = field(default_factory=list)
     single_choice: bool = False
     shuffle: bool = True
-    labels: AnsNumbering = "none"
+    numbering: AnsNumbering = "abc"
 
     qtype: str = "multichoice"
 
@@ -79,13 +84,34 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
                 f"Sum of positive fractions must be 100; got {total_positive}"
             )
 
-    # Fluent set_* wrappers (aliases)
-    def set_labels(self, scheme: AnsNumbering) -> Self:
-        self.labels = scheme
+    def set_numbering(self, scheme: AnsNumbering) -> Self:
+        """Number the choices: 'abc' | 'ABCD' | '123' | 'iii' | 'III' | 'none'.
+
+        Moodle XML `<answernumbering>`; edit form "Number the choices?".
+        """
+        self.numbering = scheme
         return self
+
+    def set_labels(self, scheme: AnsNumbering) -> Self:
+        """Deprecated: use set_numbering."""
+        warnings.warn("set_labels() is deprecated; use set_numbering()", DeprecationWarning, stacklevel=2)
+        return self.set_numbering(scheme)
+
+    @property
+    def labels(self) -> AnsNumbering:
+        """Deprecated: use numbering."""
+        warnings.warn("MultiChoice.labels is deprecated; use numbering", DeprecationWarning, stacklevel=2)
+        return self.numbering
+
+    @labels.setter
+    def labels(self, scheme: AnsNumbering) -> None:
+        warnings.warn("MultiChoice.labels is deprecated; use numbering", DeprecationWarning, stacklevel=2)
+        self.numbering = scheme
 
     def set_single_choice(self, on: bool = True) -> Self:
         """Toggle single-answer (radio-button) mode.
+
+        Moodle XML `<single>`; edit form "One or multiple answers?".
 
         This affects UI presentation and validation rules:
         - When True, a radio-button UI is used. Validation requires one answer at 100% and
@@ -122,12 +148,24 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     def set_choice_layout(
         self,
         *,
-        labels: Optional[AnsNumbering] = None,
+        numbering: Optional[AnsNumbering] = None,
         shuffle: Optional[bool] = None,
         single_choice: Optional[bool] = None,
+        labels: Optional[AnsNumbering] = None,
     ) -> Self:
+        """Set numbering, shuffle, and single_choice at once; None leaves a value unchanged.
+
+        `labels` is a deprecated alias of `numbering`.
+        """
         if labels is not None:
-            self.labels = labels
+            warnings.warn(
+                "set_choice_layout(labels=...) is deprecated; use numbering=...", DeprecationWarning, stacklevel=2
+            )
+            if numbering is not None:
+                raise TypeError("Give numbering or labels, not both")
+            numbering = labels
+        if numbering is not None:
+            self.numbering = numbering
         if shuffle is not None:
             self.shuffle = bool(shuffle)
         if single_choice is not None:
@@ -270,7 +308,10 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         return self
 
     def set_shuffle(self, on: bool = True) -> Self:
-        """Enable/disable shuffling of answers."""
+        """Enable/disable shuffling of answers.
+
+        Moodle XML `<shuffleanswers>`; edit form "Shuffle the choices?".
+        """
         self.shuffle = bool(on)
         return self
 

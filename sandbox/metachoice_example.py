@@ -45,9 +45,9 @@ mc.add_stem(
     }
 )
 
-# Use a prototype to set defaults like labels/shuffle
+# Use a prototype to set defaults like numbering/shuffle
 # Maybe
-proto = Q.MultiChoice().set_choice_layout(labels="none", shuffle=False)
+proto = Q.MultiChoice().set_choice_layout(numbering="none", shuffle=False)
 
 group = mc.generate_multichoice(n=3, limit=2, seed=42, prototype=proto)
 

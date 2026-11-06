@@ -28,7 +28,7 @@ def test_reader_multichoice_choices(tmp_path):
           wrong: [Madrid, Zurich]
         tags: [EU]
         choice_layout:
-          labels: ABCD
+          numbering: ABCD
           shuffle: false
           single_choice: false
         ---
@@ -58,7 +58,7 @@ def test_reader_multichoice_choices(tmp_path):
     assert {a.text.strip() for a in wrongs} >= {"Madrid", "Zurich"}
 
     # Options carried over
-    assert getattr(q, "labels", None) == "ABCD"
+    assert q.numbering == "ABCD"
     assert getattr(q, "shuffle", None) is False
     assert getattr(q, "single_choice", None) is False
 
@@ -70,7 +70,7 @@ def test_reader_multichoice_choices(tmp_path):
         .ask(Text("Pick EU capitals", format="markdown"))
         .set_choices_correct(Text("Paris", format="markdown"), Text("Berlin", format="markdown"))
         .set_choices_wrong(Text("Madrid", format="markdown"), Text("Zurich", format="markdown"))
-        .set_labels("ABCD")
+        .set_numbering("ABCD")
         .set_shuffle(False)
         .set_tags("EU")
     )

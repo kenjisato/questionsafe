@@ -20,6 +20,9 @@ Key internal documents:
 - Codebase optimization is prioritized over backward compatibility.
   Never introduce code just for backward compat; delete old code and rewrite tests and docs.
   Optimization includes clarity and conciseness.
+- Exception while the library is being dogfooded: a public rename keeps the old name for a
+  while as a deprecated alias (`DeprecationWarning` in Python, `FutureWarning` for Markdown
+  keys), listed under "Deprecated" in `CHANGELOG.md`, and is removed in a later release.
 - Write the most idiomatic Python, as an experienced developer would.
 - When introducing a new feature, write a failing test first, then implement (TDD).
 

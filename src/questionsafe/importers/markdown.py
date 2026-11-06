@@ -67,6 +67,34 @@ def _coerce_text_like(val: Any, fmt: str) -> Text | None:
     return Text(str(val), format=fmt)
 
 
+# choice_layout key -> (Moodle full-form key, cast)
+_CHOICE_LAYOUT = {
+    "numbering": ("answernumbering", str),
+    "shuffle": ("shuffleanswers", bool),
+    "single_choice": ("single", bool),
+}
+
+
+def _apply_choice_layout(q: Any, meta: Dict[str, Any]) -> None:
+    """Apply `choice_layout:` (short names) or the Moodle full-form keys, never both for one setting."""
+    layout = dict(meta.get("choice_layout") or {})
+    if "labels" in layout:
+        warnings.warn(f"{q.name}: choice_layout: labels is deprecated; use numbering", FutureWarning, stacklevel=2)
+        if "numbering" in layout:
+            raise ValueError("Give choice_layout numbering or labels, not both")
+        layout["numbering"] = layout.pop("labels")
+    unknown = set(layout) - set(_CHOICE_LAYOUT)
+    if unknown:
+        raise ValueError(f"Unknown choice_layout keys: {sorted(unknown)}; expected {list(_CHOICE_LAYOUT)}")
+    values = {}
+    for short, (full, cast) in _CHOICE_LAYOUT.items():
+        if short in layout and full in meta:
+            raise ValueError(f"Give choice_layout {short} or {full}, not both")
+        if short in layout or full in meta:
+            values[short] = cast(layout[short] if short in layout else meta[full])
+    q.set_choice_layout(**values)
+
+
 def _apply_question_common(q: Any, meta: Dict[str, Any], body: str) -> None:
     fmt = _text_format(meta)
     # questiontext from body (if non-empty)
@@ -647,17 +675,7 @@ class Reader:
                 raise ValueError(f"singlechoice expects exactly one correct choice; found {len(correct)}")
             q.set_choice_correct(correct[0]).set_choices_wrong(*wrong)
 
-        # choice_layout (new API)
-        layout = meta.get("choice_layout") or {}
-        if isinstance(layout, dict):
-            try:
-                q.set_choice_layout(
-                    labels=str(layout["labels"]) if "labels" in layout else None,
-                    shuffle=bool(layout["shuffle"]) if "shuffle" in layout else None,
-                    single_choice=bool(layout["single_choice"]) if "single_choice" in layout else True,
-                )
-            except Exception:
-                pass
+        _apply_choice_layout(q, meta)
 
         # mixin-based application is already handled in _apply_question_common
         return q
@@ -680,17 +698,7 @@ class Reader:
             if wrong:
                 q.set_choices_wrong(*wrong)
 
-        # choice_layout (new API)
-        layout = meta.get("choice_layout") or {}
-        if isinstance(layout, dict):
-            try:
-                q.set_choice_layout(
-                    labels=str(layout["labels"]) if "labels" in layout else None,
-                    shuffle=bool(layout["shuffle"]) if "shuffle" in layout else None,
-                    single_choice=bool(layout["single_choice"]) if "single_choice" in layout else False,
-                )
-            except Exception:
-                pass
+        _apply_choice_layout(q, meta)
 
         # mixin-based application is already handled in _apply_question_common
         return q
