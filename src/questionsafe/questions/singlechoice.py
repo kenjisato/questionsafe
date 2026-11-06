@@ -11,7 +11,7 @@ from ._cloze_embed import ClozeEmbeddable
 from ..base._safe import safe_api
 
 
-@dataclass
+@dataclass(eq=False)
 class SingleChoice(MultiChoice, ClozeEmbeddable):
     """Single-choice question.
 

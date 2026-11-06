@@ -53,6 +53,11 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- `==` between choice questions (MultiChoice, SingleChoice, TrueFalse) ignores choice order
+  (#15). The order-insensitive comparison in `Question.__eq__` never ran, because each
+  `@dataclass` subclass generated its own field-by-field `__eq__`; it is removed. Other
+  question types compare answers in order (Moodle grades shortanswer and numerical by the
+  first matching answer).
 - The Markdown reader ignored the documented full-form keys `answernumbering`,
   `shuffleanswers` and `single`, and swallowed errors in `choice_layout:` (#11). They are
   now read; giving a key and its `choice_layout:` counterpart is an error, and so is an

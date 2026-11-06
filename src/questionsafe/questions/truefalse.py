@@ -7,7 +7,7 @@ from ..base._types import FeedbackLike
 from ..base._safe import safe_api
 
 
-@dataclass
+@dataclass(eq=False)
 class TrueFalse(SingleChoice):
     """True/False specialization of MultiChoice.
 

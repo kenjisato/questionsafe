@@ -1,7 +1,7 @@
 # multiplechoice.py
 from __future__ import annotations
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import List, Optional, Self, Literal
 
 from ..base._answer import TextAnswer, AnsNumbering, Answer
@@ -55,6 +55,19 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     numbering: AnsNumbering = "abc"
 
     qtype: str = "multichoice"
+
+    def __eq__(self, other: object) -> bool:
+        # Choice order is presentation, not content: compare answers as a multiset.
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        if any(getattr(self, f.name) != getattr(other, f.name) for f in fields(self) if f.name != "answers"):
+            return False
+        rest = list(other.answers)
+        for a in self.answers:
+            if a not in rest:
+                return False
+            rest.remove(a)
+        return not rest
 
     def validate(self):
         # Base checks (penalty)

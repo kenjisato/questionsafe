@@ -97,6 +97,13 @@ Quiz([q]).to_xml()[:200]
 - Re-invoking set_* rebuilds and overwrites previous choices and feedback unless provided again.
 - For templating overrides (XML/HTML), pass templates_dir to render_xml/render_html.
 
+## Question equality
+
+`q1 == q2` compares every field of two questions of the same class. For choice questions
+(MultiChoice, SingleChoice, TrueFalse) the order of the choices is ignored: it is presentation,
+not content. For ShortAnswer and Numerical the order counts, because Moodle grades them by
+the first matching answer. To compare choice order as well, use `q1.answers == q2.answers`.
+
 ## Numerical precision and equality
 
 Rationale and behavior
