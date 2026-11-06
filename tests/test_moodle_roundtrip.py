@@ -402,3 +402,23 @@ def test_images_survive_import(tmp_path, container):
     theirs, release = _roundtrip(ours, tmp_path, container)
     assert sorted(files(theirs)) == sorted(files(ours)), f"on Moodle {release}"
     assert all(f for _, f in files(theirs))
+
+
+def test_single_choice_partial_credit_survives_import(tmp_path, container):
+    """A single-answer multichoice may give partial credit besides the 100% answer (#13)."""
+    from lxml import etree
+
+    from questionsafe import Answer, Q, Quiz
+    from questionsafe.writer.moodle import render_xml
+
+    q = Q.MultiChoice(name="rt-single-partial", questiontext="Pick.").set_single_choice().set_shuffle(False)
+    for t, f in [("A", 100), ("B", 50), ("C", 0)]:
+        q.add_answer(Answer.from_text(t, fraction=f))
+    qz = Quiz(category="RT-single-partial")
+    qz.add(q)
+
+    theirs, release = _roundtrip(render_xml(qz), tmp_path, container)
+    el = etree.fromstring(theirs).find("question[@type='multichoice']")
+    assert el.findtext("single") == "true", f"on Moodle {release}"
+    fractions = sorted(float(a.get("fraction")) for a in el.findall("answer"))
+    assert fractions == [0.0, 50.0, 100.0], f"on Moodle {release}"

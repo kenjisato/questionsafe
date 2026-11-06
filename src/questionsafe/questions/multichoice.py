@@ -26,8 +26,8 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
     Notes
     - set_choices_correct distributes 100% uniformly across provided texts (100/N).
     - Use low-level set_answers() for non-uniform fractions or full control.
-    - Use set_single_choice(True) to render as radio buttons (single selection) while still allowing
-      partial credit across answers if their positive fractions sum to 100.
+    - Use set_single_choice(True) to render as radio buttons (single selection). Partial credit
+      is allowed: one answer must be 100%, and others may carry smaller positive fractions.
 
     Attributes
     - answers: List[Answer]
@@ -56,10 +56,6 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         super().validate()
         if not self.answers:
             raise ValueError("MultiChoice requires at least one <answer>.")
-        if self.single_choice:
-            # must have at least one 100% answer
-            if not any(abs(float(a.fraction) - 100.0) <= 1e-6 for a in self.answers):
-                raise ValueError("Single-choice needs one answer with fraction=100.")
         # Enforce Moodle-supported fraction set (including negatives)
         from ..base._constraints import ALLOWED_FRACTIONS, is_allowed
 
@@ -68,9 +64,15 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
                 raise ValueError(
                     f"Answer fraction {a.fraction} is not a supported Moodle value."
                 )
-        # Sum of positive fractions must be 100. Moodle fractions carry five
-        # decimals, so snapped uniform splits land slightly off (e.g. three
-        # corrects: 3 x 33.33333 = 99.99999); allow that rounding headroom.
+        # As in Moodle's edit form: single needs a 100% answer, multiple needs
+        # positive fractions summing to 100.
+        if self.single_choice:
+            if not any(abs(float(a.fraction) - 100.0) <= 1e-6 for a in self.answers):
+                raise ValueError("Single-choice needs one answer with fraction=100.")
+            return
+        # Moodle fractions carry five decimals, so snapped uniform splits land
+        # slightly off (e.g. three corrects: 3 x 33.33333 = 99.99999); allow
+        # that rounding headroom.
         total_positive = sum(max(0.0, float(a.fraction)) for a in self.answers)
         if abs(total_positive - 100.0) > 1e-3:
             raise ValueError(
@@ -86,10 +88,9 @@ class MultiChoice(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
         """Toggle single-answer (radio-button) mode.
 
         This affects UI presentation and validation rules:
-        - When True, a radio-button UI is used. Validation still requires that the sum of
-          positive fractions equals 100, but it does not forbid multiple positive fractions.
-          This matches Moodle's behavior for multichoice with single=true and allows
-          partial credit single-choice questions.
+        - When True, a radio-button UI is used. Validation requires one answer at 100% and
+          does not check the sum, so other answers may carry partial credit. This matches
+          Moodle's edit-form validation for multichoice with single=true.
         - When False, multiple answers can be selected (checkbox UI).
         """
         self.single_choice = bool(on)

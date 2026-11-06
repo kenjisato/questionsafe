@@ -164,7 +164,7 @@ Question stem in Markdown
 
 ## MultiChoice
 
-Multiple-choice (checkbox or single radio UI). Positive fractions must sum to 100. Supports choice_layout (labels/shuffle/single_choice), hints, general and combined feedback.
+Multiple-choice (checkbox or single radio UI). With checkboxes, positive fractions must sum to 100; with `single_choice: true`, one answer must be 100 and others may give partial credit. Supports choice_layout (labels/shuffle/single_choice), hints, general and combined feedback.
 
 ### Short-hand
 
@@ -202,7 +202,7 @@ name: str
 defaultgrade: float
 answers:
   - text: str
-    fraction: float                # positives must sum to 100
+    fraction: float                # multiple: positives sum to 100; single: one at 100
     feedback: str | {text, format} # optional
 single: bool
 answernumbering: abc|ABCD|123|iii|III|none

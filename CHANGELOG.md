@@ -53,6 +53,10 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- `MultiChoice` with `set_single_choice()` accepts partial credit as Moodle does (#13):
+  one answer at 100% is required and the sum of positive fractions is no longer checked
+  (e.g. 100/50/0 used to fail with "Sum of positive fractions must be 100").
+  `SingleChoice` still allows exactly one positive answer.
 - Choices and feedback were written as `format="html"` whatever the author wrote, so
   Markdown in them was shown literally (#8). The Markdown reader now gives every plain-string
   text (choices, answer and combined feedback, hints, essay grader info, MetaChoice choices

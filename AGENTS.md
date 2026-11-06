@@ -75,7 +75,8 @@ Current safe methods:
 ## Validation rules (selected)
 
 - `MultiChoice`
-  - Positive fractions must sum to 100.
+  - Multiple-answer: positive fractions must sum to 100. Single-answer (`set_single_choice`):
+    one answer must be 100%; other positive fractions (partial credit) are allowed, as in Moodle.
   - Fractions must come from Moodle's allowed set (including negatives).
   - `add_choice_correct` under the safe contract: the first correct gets 100; if existing corrects
     are uniform and sum to 100, recompute uniform = 100/(n+1) and snap to an allowed value;
