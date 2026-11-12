@@ -83,3 +83,45 @@ def test_shortanswer_answers_list_still_supported(tmp_path):
     )
     assert q_yaml == q_api
 
+
+
+def test_shortanswer_case_sensitive(tmp_path):
+    from questionsafe import Reader
+
+    for value, usecase in [("true", 1), ("false", 0)]:
+        p = _write(
+            tmp_path,
+            f"""
+            ---
+            type: shortanswer
+            name: SA/Case
+            answer: Tokyo
+            case_sensitive: {value}
+            ---
+
+            Capital of Japan?
+            """,
+        )
+        assert Reader(p).read().usecase == usecase
+
+
+def test_shortanswer_answers_fraction_defaults_to_100(tmp_path):
+    # As documented, and as ShortAnswer.add_answer does; choices still default to 0.
+    from questionsafe import Reader
+
+    p = _write(
+        tmp_path,
+        """
+        ---
+        type: shortanswer
+        name: SA/Default
+        answers:
+          - text: Tokyo
+          - text: Edo
+            fraction: 50
+        ---
+
+        Capital of Japan?
+        """,
+    )
+    assert [(a.text, a.fraction) for a in Reader(p).read().answers] == [("Tokyo", 100.0), ("Edo", 50.0)]

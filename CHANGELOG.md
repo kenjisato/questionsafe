@@ -53,6 +53,10 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- Two documented shortanswer settings were not applied by the Markdown reader:
+  `case_sensitive: true` had no effect (the reader called a method that does not exist and
+  swallowed the error; it now sets `usecase`), and an `answers:` item without `fraction`
+  got 0 instead of the documented 100 (the default of `ShortAnswer.add_answer`).
 - `==` between choice questions (MultiChoice, SingleChoice, TrueFalse) ignores choice order
   (#15). The order-insensitive comparison in `Question.__eq__` never ran, because each
   `@dataclass` subclass generated its own field-by-field `__eq__`; it is removed. Other

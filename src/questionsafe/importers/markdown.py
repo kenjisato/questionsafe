@@ -134,7 +134,9 @@ def _apply_question_common(q: Any, meta: Dict[str, Any], body: str) -> None:
             if isinstance(q, (_SC, _TF, _MC, _SA)):
                 # Choice texts are formatted text; other answers are matched as plain strings
                 answer_fmt = fmt if isinstance(q, (_SC, _MC)) else None
-                answers_list = _parse_text_answers(answers_meta, fmt, answer_fmt)
+                # A short answer without a fraction is accepted, as ShortAnswer.add_answer does
+                default_fraction = 100.0 if isinstance(q, _SA) else 0.0
+                answers_list = _parse_text_answers(answers_meta, fmt, answer_fmt, default_fraction)
                 if answers_list:
                     q.set_answers(*answers_list)  # type: ignore[call-arg]
         except Exception:
@@ -202,11 +204,11 @@ def _apply_combined_feedback_common(q: Any, meta: Dict[str, Any], fmt: str) -> N
             q.set_feedback_incorrect(kwargs["incorrect"])  # type: ignore[arg-type]
 
 
-def _parse_text_answers(answers_meta: Any, fmt: str, answer_fmt: str | None) -> list:
+def _parse_text_answers(answers_meta: Any, fmt: str, answer_fmt: str | None, default_fraction: float = 0.0) -> list:
     """Parse a list of text answers from front matter answers.
 
     Each item may be:
-    - dict with keys: text, fraction, feedback (str or {text,format})
+    - dict with keys: text, fraction (default `default_fraction`), feedback (str or {text,format})
     - bare string (treated as fraction=0)
     Returns a list of Answer.from_text(...) (TextAnswer instances).
     """
@@ -219,7 +221,7 @@ def _parse_text_answers(answers_meta: Any, fmt: str, answer_fmt: str | None) -> 
             if not txt:
                 continue
             try:
-                frac = float(item.get("fraction", 0.0))
+                frac = float(item.get("fraction", default_fraction))
             except Exception:
                 frac = 0.0
             fb_val = _coerce_text_like(item.get("feedback"), fmt)
@@ -710,12 +712,8 @@ class Reader:
         # Common properties and full-form answers
         _apply_question_common(q, meta, body)
 
-        # Case sensitivity (new API)
         if "case_sensitive" in meta:
-            try:
-                q.set_case_sensitive(bool(meta["case_sensitive"]))
-            except Exception:
-                pass
+            q.set_usecase(bool(meta["case_sensitive"]))
 
         # Shorthand 'answer' (single): scalar or mapping with text/feedback; fraction fixed to 100
         single_meta = meta.get("answer")
