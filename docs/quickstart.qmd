@@ -1,24 +1,68 @@
 ---
-title: "Quickstart Guide"
+title: "Quickstart"
 ---
 
-Two approaches 
+## Install
 
-
-## Installation
-
-**QuestionSafe** comes with command line tools, which would be good for most of the tasks. 
+The command-line tool:
 
 ```bash
-uvx install questionsafe
-# pipx install questionsafe
+uv tool install questionsafe        # or: pipx install questionsafe
 ```
 
-Advanced usage may need the [Python API](python.qmd).
+As a library in a Python project:
 
 ```bash
-uv pip install questionsafe
-# pip install questionsafe
+uv add questionsafe                 # or: pip install questionsafe
 ```
 
+The release on PyPI lags behind the repository. For the current version, install from
+GitHub, e.g. `uv tool install git+https://github.com/kenjisato/questionsafe`.
 
+## Two ways to write questions
+
+**Markdown files** suit most question banks: one question per file, YAML front matter for
+the settings, the body for the question text.
+
+```markdown
+---
+type: singlechoice
+name: Japan/Capital
+---
+
+What is the capital of Japan?
+
+## /choices
+
+- (x) Tokyo
+- ( ) Osaka
+- ( ) Kyoto
+```
+
+```bash
+questionsafe validate capital.md
+questionsafe render capital.md --out capital.xml   # import this into Moodle
+```
+
+Next: [Markdown Schema](markdown.qmd) for every key, [Command Line](commandline.md) for
+projects and templates.
+
+**Python** suits generated questions and variants:
+
+```python
+from questionsafe import Q, Quiz
+
+q = (
+    Q.SingleChoice("Japan/Capital")
+    .ask("What is the capital of Japan?")
+    .set_choice_correct("Tokyo")
+    .set_choices_wrong("Osaka", "Kyoto")
+)
+Quiz([q]).to_xml("capital.xml")
+```
+
+Next: [Python API](python.qmd), and [MetaChoice](metachoice.qmd) for generating variants
+from a pool of choices.
+
+The two mix: `Reader("capital.md").read()` turns a Markdown file into a question object,
+which can go into a `Quiz` with questions built in Python.

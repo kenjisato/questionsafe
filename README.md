@@ -3,7 +3,7 @@
 
 # questionsafe
 
-Build Moodle quizzes (XML) from Python.
+Build Moodle quizzes (XML) from Markdown files or Python.
 
 ## Highlights
 
@@ -11,7 +11,7 @@ Build Moodle quizzes (XML) from Python.
   `ShortAnswer`, `Numerical`, `Essay`, `Description`
 - Render to Moodle XML and HTML preview using
   [Jinja2](https://jinja.palletsprojects.com/en/stable/)
-- CLI and examples for quick usage \[TODO\]
+- Markdown question files and a `questionsafe` command line tool
 
 ## Install
 
@@ -35,7 +35,9 @@ print(render_xml(tf).decode("utf-8"))
 # <?xml version="1.0" encoding="UTF-8"?>
 # <quiz>
 # 
-# <question type="truefalse"><name><text>Logic/DeMorgan</text></name>
+# <question type="truefalse">
+#   
+#   <name><text>Logic/DeMorgan</text></name>
 #   <questiontext format="html">
 #     <text><![CDATA[Not(A and B) == (Not A) or (Not B)]]></text>
 #   </questiontext><defaultgrade>1.0</defaultgrade>
@@ -47,6 +49,7 @@ print(render_xml(tf).decode("utf-8"))
 #   </answer>
 #   <idnumber></idnumber>
 # </question>
+# 
 # </quiz>
 ```
 
@@ -88,7 +91,9 @@ API summary for `MultiChoice`
 - `set_choices_correct(*texts, feedback=None)` (uniform 100/N)
 - `set_choices_wrong(*texts, fraction=0, feedback=None)`
 - Low-level: `add_answer(answer)`, `set_answers(*answers)`
-- Other: `set_single()`, `set_numbering(scheme)`, `set_shuffle(on=True)`
+- Other: `set_single_choice()`, `set_numbering(scheme)`,
+  `set_shuffle(on=True)`,
+  `set_choice_layout(numbering=None, shuffle=None, single_choice=None)`
 
 ## ShortAnswer
 
@@ -111,6 +116,23 @@ nu = (
     Q.Numerical("NU")
     .ask("2 + 2?")
     .add_answer(4)
+)
+```
+
+## Cloze (embedded)
+
+``` python
+from questionsafe import Q, Reader
+
+# Sub-questions read from markdown
+sc = Reader("examples/markdown/schoice.md").read().set_name("gap1")
+mc = Reader("examples/markdown/mchoice.md").read().set_name("gap2")
+
+clz = (
+  Q.Cloze("Japan/Cities")
+  .ask("The capital of Japan is {{gap1}}.\nChoose stations in Tokyo.\n{{gap2}}")
+  .embed_question(sc)
+  .embed_question(mc, orientation="h", weight=2)
 )
 ```
 

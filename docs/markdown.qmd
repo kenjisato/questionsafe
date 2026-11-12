@@ -3,15 +3,18 @@ title: "Markdown Input Schema"
 page-layout: article
 ---
 
-# Markdown Input Schema
-
-This document defines the YAML schema used in front matter for writing questions in Markdown. One question per file; the Markdown body becomes the question stem (questiontext). Unless specified otherwise, the body is interpreted as Markdown format.
+This page is the reference for writing questions in Markdown: the YAML front matter and the
+body syntax. One question per file; the body becomes the question text, in Markdown unless
+`format` says otherwise. Read a file with `questionsafe render`/`validate` on the command line
+or `Reader(path).read()` in Python.
 
 ## Common fields (all types)
 
 - type: string
-  - One of: singlechoice, multichoice, shortanswer, numerical, truefalse, essay, description,
-    metachoice (a template, not a single question; read with `Reader.read_metachoice()`)
+  - One of: singlechoice (aliases `single`, `sc`), multichoice (`multiple`, `multi`, `mc`),
+    truefalse (`tf`), shortanswer (`short`, `sa`), numerical (`num`), essay, description
+    (`desc`), cloze, metachoice (a template, not a single question; read with
+    `Reader.read_metachoice()`)
 - name: string
 - defaultgrade: float
 - tags: list[str]
@@ -38,6 +41,42 @@ This document defines the YAML schema used in front matter for writing questions
 Notes:
 - When a question type does not support a configuration (e.g., combined feedback for SingleChoice), the importer will emit a warning and ignore it.
 - If conflicting configurations are given (e.g., both answers and choices), the importer raises an error.
+
+### Shared front matter: include
+
+`include:` merges front matter from other files: one path or a list of paths, each a YAML
+file or a Markdown file whose front matter is used.
+
+```yaml
+---
+include: [course-defaults.yml, ../shared/feedback.md]
+type: singlechoice
+name: Japan/Capital
+---
+```
+
+- Keys in the file itself win over included keys; among includes, the first file wins.
+  `Reader(path).read(include_warn=True)` warns about each overridden key.
+- Relative paths resolve against the question file's directory (or `Reader(answer_dir=...)`).
+- Includes are single-level: an `include:` inside an included file is ignored.
+
+The front matter may also wrap the question keys in `question:`; keys inside it win over
+top-level keys.
+
+### Paths and variables
+
+`include:`, cloze `file:`, and essay `{path: ...}` values expand `~`, `$VAR`, and `${VAR}`.
+Variables come from `variables:` in `questionsafe.yml` in the current directory, then from
+the environment:
+
+```yaml
+# questionsafe.yml
+variables:
+  ROOT: /path/to/shared
+```
+
+Image paths expand `~` but not variables; they resolve against the question file's
+directory (see Images).
 
 ## Choices in the body
 
@@ -240,6 +279,21 @@ Question stem
 
 Exactly two answers with texts 'true' and 'false'. Supports general feedback only.
 
+### Short-hand
+
+```yaml
+---
+type: truefalse
+name: str
+answer: true|false     # also yes/no, t/f, y/n, 1/0
+---
+Statement to judge
+```
+
+The body may also list the two choices under `/choices` (see Choices in the body).
+
+### Full-form
+
 ```yaml
 ---
 type: truefalse
@@ -260,6 +314,24 @@ Question stem
 ## ShortAnswer
 
 Accepted strings with optional fractions. Supports hints/penalty and combined feedback.
+Moodle grades a response by the first matching answer, so list specific answers before
+wildcards such as `*`.
+
+### Short-hand
+
+One accepted answer, at 100%:
+
+```yaml
+---
+type: shortanswer
+name: str
+answer: str                        # or {text: str, feedback: str | {text, format}}
+case_sensitive: true|false
+---
+Question stem
+```
+
+### Full-form
 
 ```yaml
 ---
@@ -287,7 +359,23 @@ Question stem
 
 ## Numerical
 
-Numeric answers with optional tolerance; optional units.
+Numeric answers with optional tolerance. Moodle grades a response by the first matching
+answer, so list narrower tolerances first.
+
+### Short-hand
+
+One exact answer, at 100%:
+
+```yaml
+---
+type: numerical
+name: str
+answer: float                      # a scalar; tolerance and feedback need the full form
+---
+Question stem
+```
+
+### Full-form
 
 ```yaml
 ---
@@ -299,15 +387,6 @@ answers:
     tolerance: float
     fraction: float                # default 100
     feedback: str | {text, format}
-units:                              # optional
-  units:
-    - name: str
-      multiplier: float
-      grade: float
-  showunits: int
-  unitgradingtype: int
-  unitpenalty: float
-  unitsleft: bool
 hints:
   - str | {text, format}
 hint_penalty: float
@@ -321,6 +400,41 @@ id: str
 ---
 Question stem
 ```
+
+Values and tolerances are read as decimals and rounded to 15 decimal places, so `0.9` in the
+file is the same number as `0.3 + 0.3 + 0.3` in Python.
+
+`units:` is not read from Markdown yet (#16); set units with the Python API.
+
+## Cloze
+
+A cloze question embeds other questions as gaps in its text. Each gap is a separate
+Markdown file (singlechoice, multichoice, shortanswer, or numerical); `{{id}}` in the body
+marks where it goes.
+
+```yaml
+---
+type: cloze
+name: Japan/Cities
+cloze:
+  gap1: schoice.md                   # a path
+  gap2: {file: mchoice.md, orientation: h, weight: 2}
+---
+
+The capital of Japan is {{gap1}}.
+
+Choose stations in Tokyo. {{gap2}}
+```
+
+- A gap is a path, or a mapping with `file`, `orientation`, and `weight`. A list of
+  one-key mappings (`- file: ...`, `- weight: 2`) is read the same way.
+- `orientation`: for singlechoice, omitted = dropdown, `v` = vertical radio buttons,
+  `h` = horizontal; for multichoice, omitted or `v` = vertical checkboxes, `h` = horizontal.
+- `weight`: the gap's share of the grade, a non-negative integer (default 1).
+- Gap files resolve against the cloze file's directory (or `Reader(question_dir=...)`)
+  and expand variables (see Paths and variables). A gap file's question text is not used.
+- Without `cloze:`, the body is used as is, so it may contain Moodle cloze syntax written
+  by hand.
 
 ## Essay
 

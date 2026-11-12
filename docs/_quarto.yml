@@ -30,26 +30,28 @@ website:
         file: index.qmd
       - text: Quickstart
         file: quickstart.qmd
+      - text: Markdown Schema
+        file: markdown.qmd
+      - text: Command Line
+        file: commandline.md
       - text: Python API
         file: python.qmd
       - text: MetaChoice
         file: metachoice.qmd
-      - text: Markdown Schema
-        file: markdown.qmd
-      - text: Usage
-        file: usage.qmd
       - text: API Reference
         file: api/index.qmd
-      - text: API Overview
-        file: api-overview.md
-      - text: Moodle Compatibility
-        file: moodle-compat.md
-      - text: References
-        file: references.md
-      - text: Roadmap
-        file: roadmap.md
       - text: Changelog
-        file: CHANGELOG.md
+        file: changelog.qmd
+      - section: Development
+        contents:
+          - text: API Overview
+            file: api-overview.md
+          - text: Moodle Compatibility
+            file: moodle-compat.md
+          - text: References
+            file: references.md
+          - text: Roadmap
+            file: roadmap.md
     tools:
       - icon: github
         href: https://github.com/kenjisato/questionsafe

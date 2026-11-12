@@ -42,6 +42,13 @@
   Stacks are per Moodle branch (`moodle-rt.sh up 405`, `up 502`) and can run side
   by side; each round-trip test runs once per running stack.
 
+- `questionsafe validate [PATHS]... [--target MAJOR.MINOR]`: parses each Markdown
+  question, runs model validation, renders it to Moodle XML and checks well-formedness
+  (lxml), and optionally flags features the target Moodle version does not understand.
+- Moodle version capability table (`writer/moodle/_versions.py`) with `parse_version`
+  and `check_target`; the first version-gated entry is `idnumber` (Moodle 3.6+),
+  verified against Moodle's `format.php` on stable branches.
+
 ### Changed (MetaChoice / MultiChoice fractions)
 - `Stem.text` widened to `Text | str`; `add_stem` no longer flattens a `Text`
   stem to plain text, so `format: markdown` survives to the generated question.
@@ -53,6 +60,9 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- Reader.read(validate=True) now actually validates every question type; previously all
+  types except cloze returned before the validation step. Cloze-embedded fragment files
+  are read with validate=False, since fragments need not be standalone-valid.
 - Two documented shortanswer settings were not applied by the Markdown reader:
   `case_sensitive: true` had no effect (the reader called a method that does not exist and
   swallowed the error; it now sets `usecase`), and an `answers:` item without `fraction`
@@ -111,6 +121,17 @@
   `set_numbering("none")`) to keep the old look.
 - `labels` is renamed `numbering` (#11): the `MultiChoice.numbering` attribute,
   `set_numbering()`, `set_choice_layout(numbering=...)` and `choice_layout: {numbering: ...}`.
+- Numerical Markdown schema: the numeric value key in full-form `answers` items is
+  `answer` (matching the documented schema, authoring templates, and
+  `Numerical.add_answer`); the reader previously required an undocumented `value` key,
+  which silently produced questions with no answers.
+- The numerical shorthand `answer:` accepts only a scalar; the undocumented mapping form
+  (`answer: {value, tolerance, feedback}`) now raises ValueError. Use full-form `answers`
+  for tolerance/feedback.
+- Numerical precision policy updated:
+  - Reader parses numeric answers via Decimal and quantizes to 1e-15 before converting to float.
+  - NumericalAnswer equality now rounds value and tolerance to 15 decimal places (was 9).
+  - Numerical CLOZE formatting uses 15 significant digits to avoid float tails.
 - MultiChoice API overhauled for clarity and EAFP-friendly usage:
   - Added verbose methods:
     - add_choice_correct(text, feedback=None) — appends a 100% correct choice
@@ -137,6 +158,13 @@
 
 ### Tests
 - Added tests/test_multichoice_set_choices.py to validate selective replacement behavior and uniform fraction distribution for set_choices_correct and set_choices_wrong.
+- Added tests/test_markdown_reader_numerical.py to validate YAML "0.9" equals API 0.3+0.3+0.3 under the new precision policy.
 
 ### Docs
 - README updated to document new MultiChoice and TrueFalse APIs and refined set_* semantics.
+- Python API guide documents the Numerical precision and equality policy (Decimal→1e-15→float, equality at 15 dp).
+- Docs restructured (#14): `markdown.qmd` is the single Markdown schema reference (type aliases,
+  `include:`, path variables, shorthands, cloze); `python.qmd` covers only the Python API
+  (absorbing `usage.qmd`); `commandline.md` matches the actual CLI and is in the sidebar; new
+  Quickstart and index; the site's changelog includes this file instead of a diverging copy;
+  README regenerated.

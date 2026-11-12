@@ -87,8 +87,6 @@ implementing the calculated XML. Revisit only if per-attempt server-side generat
 - Dependencies: `pydantic`, `textual`, `css-inline`, and `quarto` are declared but never
   imported; drop them or move them to the dev group (keep `lxml` if A adopts it).
   Conversely, `rich` and `PyYAML` are imported but only transitive; declare them explicitly.
-- `docs/commandline.md` documents `init-course` and `coverage --course`, but the implemented
-  commands are `course init` and `course coverage`; update the doc.
 - `CHANGELOG.md` lacks the four MetaChoice commits of 2025-09-18 (`2d86e4b`..`7b493ee`).
 - Decide the fate of the stray scratch file `unit/test.md` at the repository root.
 - `docs/reference/` (committed) and `docs/api/` (gitignored quartodoc output) form two
