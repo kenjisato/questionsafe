@@ -314,8 +314,8 @@ Question stem
 ## ShortAnswer
 
 Accepted strings with optional fractions. Supports hints/penalty and combined feedback.
-Moodle grades a response by the first matching answer, so list specific answers before
-wildcards such as `*`.
+One answer must be worth 100%. Moodle grades a response by the first matching answer, so
+list specific answers before wildcards such as `*`.
 
 ### Short-hand
 
@@ -359,7 +359,7 @@ Question stem
 
 ## Numerical
 
-Numeric answers with optional tolerance. Moodle grades a response by the first matching
+Numeric answers with optional tolerance. One answer must be worth 100%. Moodle grades a response by the first matching
 answer, so list narrower tolerances first.
 
 ### Short-hand

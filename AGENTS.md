@@ -84,6 +84,7 @@ Current safe methods:
   - `add_choice_correct` under the safe contract: the first correct gets 100; if existing corrects
     are uniform and sum to 100, recompute uniform = 100/(n+1) and snap to an allowed value;
     if snapping is impossible (e.g., 100/11) or the corrects are not uniform, raise and suggest `set_answers`.
+- `ShortAnswer`, `Numerical`: one answer must be 100% (Moodle's edit form, `fractionsnomax`).
 - `SingleChoice`: exactly one correct answer with fraction=100 and no other positive fractions.
 - `TrueFalse`: exactly two answers with texts "true" and "false" (case-insensitive).
 

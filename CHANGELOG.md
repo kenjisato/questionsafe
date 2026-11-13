@@ -60,6 +60,8 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- `ShortAnswer.validate()` and `Numerical.validate()` require an answer worth 100%, as
+  Moodle's edit forms do (#17); without one, no response could get full marks.
 - Reader.read(validate=True) now actually validates every question type; previously all
   types except cloze returned before the validation step. Cloze-embedded fragment files
   are read with validate=False, since fragments need not be standalone-valid.

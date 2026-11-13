@@ -76,6 +76,9 @@ class ShortAnswer(CombinedFeedbackMixin, MultiTryMixin, Question[TextAnswer], Cl
                 raise ValueError(
                     f"Answer fraction {a.fraction} is not a supported Moodle value."
                 )
+        # Moodle's edit form requires one answer at 100% (fractionsnomax)
+        if not any(float(a.fraction) == 100.0 for a in self.answers):
+            raise ValueError("ShortAnswer requires one answer worth 100%.")
 
     # CLOZE embedding method (kept at bottom)
     @ClozeEmbeddable.cloze_precheck

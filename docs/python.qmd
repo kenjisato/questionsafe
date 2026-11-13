@@ -142,8 +142,9 @@ mc3.validate()
 embed_example(Quiz([_]))
 ```
 
-Moodle grades a response by the first matching answer, so add specific answers before
-wildcards such as `*`. `set_usecase(True)` makes matching case-sensitive.
+One answer must be worth 100% (for Numerical too), as Moodle's edit form requires. Moodle
+grades a response by the first matching answer, so add specific answers before wildcards
+such as `*`. `set_usecase(True)` makes matching case-sensitive.
 
 ### Numerical
 

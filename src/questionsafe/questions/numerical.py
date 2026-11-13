@@ -291,6 +291,9 @@ class Numerical(MultiTryMixin, Question[NumericalAnswer], ClozeEmbeddable):
                 raise ValueError(
                     f"Answer fraction {a.fraction} is not a supported Moodle value."
                 )
+        # Moodle's edit form requires one answer at 100% (fractionsnomax)
+        if not any(float(a.fraction) == 100.0 for a in self.answers):
+            raise ValueError("Numerical requires one answer worth 100%.")
         # UnitSpec validates itself; nothing else to do here
 
     # CLOZE embedding method (kept at bottom)
