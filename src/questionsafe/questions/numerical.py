@@ -1,14 +1,19 @@
 # numerical.py
 from __future__ import annotations
-from dataclasses import dataclass, field
+import warnings
+from dataclasses import dataclass, field, replace
 from typing import List, Optional, overload, Literal
 
 from ..base._answer import NumericalAnswer, Answer
 from ..base._mixins import MultiTryMixin
 from ..base._question import Question
-from ..base._units import Unit, UnitSpec
+from ..base._units import Unit, UnitHandling, UnitInput, UnitPenaltyOf, UnitSpec
 from ..base._types import FeedbackLike
 from ._cloze_embed import ClozeEmbeddable
+
+# What the deprecated Moodle-code keywords defaulted to: graded, radio, 0.2 of the question grade
+_LEGACY_UNIT_DEFAULTS = {"showunits": 1, "unitgradingtype": 2, "unitpenalty": 0.2, "unitsleft": False}
+_LEGACY_SPEC_DEFAULTS = {"handling": "graded", "input": "radio", "penalty_of": "question", "penalty": 0.2}
 
 
 @dataclass
@@ -78,96 +83,74 @@ class Numerical(MultiTryMixin, Question[NumericalAnswer], ClozeEmbeddable):
         self.answers.append(ans)
         return self
 
-    def _ensure_unitspec(
-        self,
-        *,
-        showunits: Optional[int] = None,
-        unitgradingtype: Optional[int] = None,
-        unitpenalty: Optional[float] = None,
-        unitsleft: Optional[bool] = None,
-    ) -> None:
-        """Ensure self.units exists; create with sensible defaults if missing.
-
-        Defaults:
-        - showunits = 1 (required/graded)
-        - unitgradingtype = 2 (fraction of total grade)
-        - unitpenalty = 0.2
-        - unitsleft = False
-        """
-        if self.units is None:
-            self.units = UnitSpec(
-                units=[],
-                showunits=1 if showunits is None else showunits,
-                unitgradingtype=2 if unitgradingtype is None else unitgradingtype,
-                unitpenalty=0.2 if unitpenalty is None else unitpenalty,
-                unitsleft=False if unitsleft is None else bool(unitsleft),
-            )
-        else:
-            if showunits is not None:
-                self.units.showunits = showunits
-            if unitgradingtype is not None:
-                self.units.unitgradingtype = unitgradingtype
-            if unitpenalty is not None:
-                self.units.unitpenalty = unitpenalty
-            if unitsleft is not None:
-                self.units.unitsleft = bool(unitsleft)
+    def _legacy_unit_options(self, base: UnitSpec, legacy: dict) -> dict:
+        """Map the deprecated Moodle-code keywords onto UnitSpec options."""
+        unknown = set(legacy) - set(_LEGACY_UNIT_DEFAULTS)
+        if unknown:
+            raise TypeError(f"Unexpected keyword arguments: {sorted(unknown)}")
+        warnings.warn(
+            f"{self.name}: {', '.join(sorted(legacy))} are deprecated; use handling, input, "
+            "penalty_of, penalty and left",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        codes = {**base.moodle_codes(), **{k: legacy[k] for k in ("showunits", "unitgradingtype") if k in legacy}}
+        options = UnitSpec.options_from_moodle_codes(codes["showunits"], codes["unitgradingtype"])
+        if "unitpenalty" in legacy:
+            options["penalty"] = legacy["unitpenalty"]
+        if "unitsleft" in legacy:
+            options["left"] = legacy["unitsleft"]
+        return options
 
     def add_units(
         self,
         *units: Unit,
-        showunits: int = 1,
-        unitgradingtype: int = 2,
-        unitpenalty: float = 0.2,
-        unitsleft: bool = False,
+        handling: UnitHandling = "optional",
+        penalty: float = 0.1,
+        penalty_of: UnitPenaltyOf = "response",
+        input: UnitInput = "text",
+        left: bool = False,
+        **legacy,
     ) -> "Numerical":
-        """Assign a UnitSpec and enable units for this Numerical question.
+        """Replace the units and their options (see UnitSpec).
 
         Parameters
-        - units: one or more Unit instances, e.g., Unit("m/s", 1.0, 100)
-        - showunits: 3 not used, 0 optional, 1 required/graded (default 1)
-        - unitgradingtype: 0 no penalty, 1 fraction of response grade, 2 fraction of total grade (default 2)
-        - unitpenalty: penalty to apply when unit is wrong (must be an allowed value) (default 0.2)
-        - unitsleft: if True, display unit to the left (e.g., $1.00)
+        - units: Unit instances, the base unit first, e.g., Unit("m/s"), Unit("km/h", 3.6)
+        - handling: "none", "optional" (default), or "graded"
+        - penalty, penalty_of, input: for graded units (defaults 0.1, "response", "text")
+        - left: show the unit on the left, as in $1.00
 
-        Returns
-        - self (Numerical) to allow fluent chaining
+        The Moodle-code keywords showunits, unitgradingtype, unitpenalty and unitsleft
+        are deprecated.
         """
-        # Type check to help users
         for u in units:
             if not isinstance(u, Unit):
-                raise TypeError(
-                    "add_units expects Unit instances as positional arguments"
-                )
-        self.units = UnitSpec(
-            units=list(units),
-            showunits=showunits,
-            unitgradingtype=unitgradingtype,
-            unitpenalty=unitpenalty,
-            unitsleft=unitsleft,
-        )
+                raise TypeError("add_units expects Unit instances as positional arguments")
+        options = dict(handling=handling, penalty=penalty, penalty_of=penalty_of, input=input, left=left)
+        if legacy:
+            options = {**_LEGACY_SPEC_DEFAULTS, **self._legacy_unit_options(UnitSpec(**_LEGACY_SPEC_DEFAULTS), legacy)}
+        self.units = UnitSpec(units=list(units), **options)
         return self
 
     def set_unit_options(
         self,
         *,
-        showunits: Optional[int] = None,
-        unitgradingtype: Optional[int] = None,
-        unitpenalty: Optional[float] = None,
-        unitsleft: Optional[bool] = None,
+        handling: Optional[UnitHandling] = None,
+        penalty: Optional[float] = None,
+        penalty_of: Optional[UnitPenaltyOf] = None,
+        input: Optional[UnitInput] = None,
+        left: Optional[bool] = None,
+        **legacy,
     ) -> "Numerical":
-        """Set or update global unit-handling options for this question.
-
-        Creates a UnitSpec if missing, preserving existing units.
-        """
-        existing_units = [] if self.units is None else list(self.units.units)
-        self._ensure_unitspec(
-            showunits=showunits,
-            unitgradingtype=unitgradingtype,
-            unitpenalty=unitpenalty,
-            unitsleft=unitsleft,
-        )
-        if self.units is not None and not self.units.units and existing_units:
-            self.units.units = existing_units
+        """Update unit options, keeping the units; options not given keep their values."""
+        given = dict(handling=handling, penalty=penalty, penalty_of=penalty_of, input=input, left=left)
+        options = {k: v for k, v in given.items() if v is not None}
+        if legacy:
+            current = self.units or UnitSpec(**_LEGACY_SPEC_DEFAULTS)
+            options = {**self._legacy_unit_options(current, legacy), **options}
+        else:
+            current = self.units or UnitSpec()
+        self.units = replace(current, units=list(current.units), **options)
         return self
 
     def add_answer_unit(
@@ -186,10 +169,8 @@ class Numerical(MultiTryMixin, Question[NumericalAnswer], ClozeEmbeddable):
         - Later calls may register additional units by inferring their multiplier
           against the first answer (base). Equivalent values won't add duplicate answers.
         """
-        # Ensure UnitSpec exists with sensible defaults
-        self._ensure_unitspec()
-        # Static typing: after _ensure_unitspec(), units must be present
-        assert self.units is not None
+        if self.units is None:
+            self.units = UnitSpec()
 
         v = float(value)
 
@@ -260,22 +241,9 @@ class Numerical(MultiTryMixin, Question[NumericalAnswer], ClozeEmbeddable):
         self.answers = list(answers)
         return self
 
-    def set_units(
-        self,
-        *units: Unit,
-        showunits: int = 1,
-        unitgradingtype: int = 2,
-        unitpenalty: float = 0.2,
-        unitsleft: bool = False,
-    ) -> "Numerical":
-        """Assign a UnitSpec via units and options (thin wrapper around add_units)."""
-        return self.add_units(
-            *units,
-            showunits=showunits,
-            unitgradingtype=unitgradingtype,
-            unitpenalty=unitpenalty,
-            unitsleft=unitsleft,
-        )
+    def set_units(self, *units: Unit, **options) -> "Numerical":
+        """Replace the units and their options; same arguments as add_units."""
+        return self.add_units(*units, **options)
 
     def validate(self):
         # Base checks (penalty)
@@ -294,7 +262,12 @@ class Numerical(MultiTryMixin, Question[NumericalAnswer], ClozeEmbeddable):
         # Moodle's edit form requires one answer at 100% (fractionsnomax)
         if not any(float(a.fraction) == 100.0 for a in self.answers):
             raise ValueError("Numerical requires one answer worth 100%.")
-        # UnitSpec validates itself; nothing else to do here
+        # Moodle's edit form: units in use need a unit, and the first one is the base (multiplier 1)
+        if self.units is not None and self.units.handling != "none":
+            if not self.units.units:
+                raise ValueError("Numerical units are used but no unit is given.")
+            if float(self.units.units[0].multiplier) != 1.0:
+                raise ValueError("The first unit is the base unit; its multiplier must be 1.")
 
     # CLOZE embedding method (kept at bottom)
     @ClozeEmbeddable.cloze_precheck

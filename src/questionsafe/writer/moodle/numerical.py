@@ -24,23 +24,12 @@ def _(q: Numerical):
         )
 
     units: List[Dict[str, Any]] = []
-    showunits = 3
-    unitgradingtype = 0
-    unitpenalty = 0
-    unitsleft = False
+    showunits, unitgradingtype, unitpenalty, unitsleft = 3, 0, 0, False
     if q.units is not None:
-        showunits = q.units.showunits
-        unitgradingtype = q.units.unitgradingtype
-        unitpenalty = q.units.unitpenalty
-        unitsleft = q.units.unitsleft
-        for u in q.units.units:
-            units.append(
-                {
-                    "unit": u.unit_name,
-                    "multiplier": u.multiplier,
-                    "fraction": getattr(u, "fraction", None),
-                }
-            )
+        codes = q.units.moodle_codes()
+        showunits, unitgradingtype = codes["showunits"], codes["unitgradingtype"]
+        unitpenalty, unitsleft = q.units.penalty, q.units.left
+        units = [{"unit": u.unit_name, "multiplier": u.multiplier} for u in q.units.units]
 
     d.update(
         {

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from .. import Q, Text
 from ..base._question import Question
 from ..base._answer import Answer
+from ..base._units import Unit
 from ..base._images import sub_images
 from ..base._mixins import MultiTryMixin, CombinedFeedbackMixin
 
@@ -93,6 +94,33 @@ def _apply_choice_layout(q: Any, meta: Dict[str, Any]) -> None:
         if short in layout or full in meta:
             values[short] = cast(layout[short] if short in layout else meta[full])
     q.set_choice_layout(**values)
+
+
+# Markdown unit option key -> UnitSpec option
+_UNIT_OPTIONS = {
+    "unit_handling": "handling",
+    "unit_penalty": "penalty",
+    "unit_penalty_of": "penalty_of",
+    "unit_input": "input",
+    "units_left": "left",
+}
+
+
+def _apply_units(q: Any, meta: Dict[str, Any]) -> None:
+    """Read `units:` (a list of {name, multiplier}) and the unit_* options for numerical."""
+    units_meta = meta.get("units")
+    if units_meta is not None:
+        if not isinstance(units_meta, list):
+            raise ValueError("units: must be a list of {name, multiplier}; options are top-level unit_* keys")
+        units = []
+        for item in units_meta:
+            if not isinstance(item, dict) or set(item) - {"name", "multiplier"} or "name" not in item:
+                raise ValueError(f"Each unit must be {{name, multiplier}}, got {item!r}")
+            units.append(Unit(str(item["name"]), float(item.get("multiplier", 1.0))))
+        q.add_units(*units)
+    options = {opt: meta[key] for key, opt in _UNIT_OPTIONS.items() if key in meta}
+    if options:
+        q.set_unit_options(**options)
 
 
 def _apply_question_common(q: Any, meta: Dict[str, Any], body: str) -> None:
@@ -926,6 +954,7 @@ class Reader:
             val = float(Decimal(str(single_meta)).quantize(PREC, rounding=ROUND_HALF_EVEN))
             q.add_answer(val, fraction=100.0)
 
+        _apply_units(q, meta)
         return q
 
     def _build_truefalse(self, meta: Dict[str, Any], body: str) -> Q.TrueFalse:  # type: ignore[return-value]

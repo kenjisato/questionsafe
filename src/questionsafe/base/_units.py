@@ -1,89 +1,100 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Literal
 
-# Allowed sets based on Moodle semantics
-_ALLOWED_SHOWUNITS = {
-    0,
-    1,
-    3,
-}  # 3: not used, 0: optional, 1: must be right or penalty applied
-_ALLOWED_UNITGRADINGTYPE = {
-    0,
-    1,
-    2,
-}  # 0: no penalty, 1: fraction response grade, 2: fraction total grade
-# Common penalty steps seen in Moodle (match project-wide ALLOWED_PENALTIES)
-_ALLOWED_UNIT_PENALTIES = {0.0, 0.1, 0.2, 0.25, 0.3333333, 0.5, 1.0}
+# Option values follow Moodle's numerical edit form (edit_numerical_form.php).
+# The Moodle XML format docs do not describe <showunits>/<unitgradingtype>; the codes
+# below come from qtype_numerical's constants and save_unit_options().
+UnitHandling = Literal["none", "optional", "graded"]
+UnitInput = Literal["text", "radio", "select"]
+UnitPenaltyOf = Literal["response", "question"]
 
-
-def _normalize_fraction(frac: Optional[int]) -> Optional[int]:
-    if frac is None:
-        return None
-    if isinstance(frac, bool):
-        # Avoid bools sneaking in as ints
-        raise ValueError("Unit.fraction must be an int percentage or None")
-    if isinstance(frac, int) and -100 <= frac <= 100:
-        return frac
-    raise ValueError(f"Unit.fraction must be an integer in [-100, 100], got {frac}")
+_SHOWUNITS_UNGRADED = {"none": 3, "optional": 0}  # UNITNONE, UNITOPTIONAL
+_SHOWUNITS_GRADED = {"text": 0, "radio": 1, "select": 2}  # UNITINPUT, UNITRADIO, UNITSELECT
+_UNITGRADINGTYPE = {"response": 1, "question": 2}  # UNITGRADEDOUTOFMARK, UNITGRADEDOUTOFMAX
 
 
 @dataclass
 class Unit:
-    """A measurement unit definition for numerical questions."""
+    """A unit for numerical answers.
+
+    `multiplier` converts from the base unit: a value in this unit is the value in the
+    base unit times the multiplier (base g: kg has multiplier 0.001). The base unit, with
+    multiplier 1, comes first.
+    """
 
     unit_name: str
     multiplier: float = 1.0
-    fraction: Optional[int] = None  # Optional per-unit grading fraction
 
     def __post_init__(self) -> None:
         if not self.unit_name:
             raise ValueError("Unit.unit_name must be non-empty")
-        if not isinstance(self.multiplier, (int, float)):
+        if isinstance(self.multiplier, bool) or not isinstance(self.multiplier, (int, float)):
             raise TypeError("Unit.multiplier must be numeric")
         if float(self.multiplier) == 0.0:
             raise ValueError("Unit.multiplier must be non-zero")
-        self.fraction = _normalize_fraction(self.fraction)
 
 
 @dataclass
 class UnitSpec:
-    """
-    Units and unit-handling options
+    """Units and how Moodle handles them, as on Moodle's edit form.
 
     Attributes
-    - units: List[Unit]
-        Measurement units with multipliers.
-    - showunits: int
-        How units are handled: 3) Not used at all, 0) Optional, or 1) must be right or penalty applied.
-    - unitgradingtype: int
-        0 no penalty, 1 fraction response grade, 2 fraction total grade
-    - unitpenalty: float
-        Penalty for getting the unit wrong, when they are being graded.
-    - unitsleft: bool
-        display the unit at left as in $1.00
+    - units: the base unit first, then the others.
+    - handling: "none" (units not used), "optional" (a unit, if given, converts the
+      response), or "graded" (the unit must be given and is graded).
+    - penalty: 0-1, deducted for a wrong unit (graded only).
+    - penalty_of: "response" (fraction of the response grade) or "question"
+      (fraction of the question grade) (graded only).
+    - input: "text", "radio", or "select": how the student gives the unit (graded only).
+    - left: show the unit on the left, as in $1.00.
+
+    Defaults are Moodle's: units imported without options are optional, and the edit
+    form defaults to penalty 0.1 of the response grade, entered as text, on the right.
     """
 
     units: List[Unit] = field(default_factory=list)
-    showunits: int = 0
-    unitgradingtype: int = 0
-    unitpenalty: float = 0.1
-    unitsleft: bool = False
+    handling: UnitHandling = "optional"
+    penalty: float = 0.1
+    penalty_of: UnitPenaltyOf = "response"
+    input: UnitInput = "text"
+    left: bool = False
 
     def __post_init__(self) -> None:
-        if self.showunits not in _ALLOWED_SHOWUNITS:
-            raise ValueError(
-                f"showunits must be one of {_ALLOWED_SHOWUNITS}, got {self.showunits}"
-            )
-        if self.unitgradingtype not in _ALLOWED_UNITGRADINGTYPE:
-            raise ValueError(
-                f"unitgradingtype must be one of {_ALLOWED_UNITGRADINGTYPE}, got {self.unitgradingtype}"
-            )
-        if self.unitpenalty not in _ALLOWED_UNIT_PENALTIES:
-            raise ValueError(
-                f"unitpenalty must be one of {_ALLOWED_UNIT_PENALTIES}, got {self.unitpenalty}"
-            )
-        # Ensure all units validate via their own __post_init__
+        for name, value, allowed in (
+            ("handling", self.handling, ("none", "optional", "graded")),
+            ("penalty_of", self.penalty_of, tuple(_UNITGRADINGTYPE)),
+            ("input", self.input, tuple(_SHOWUNITS_GRADED)),
+        ):
+            if value not in allowed:
+                raise ValueError(f"Unit {name} must be one of {allowed}, got {value!r}")
+        if not 0.0 <= float(self.penalty) <= 1.0:
+            raise ValueError(f"Unit penalty must be between 0 and 1, got {self.penalty}")
+        self.left = bool(self.left)
         for u in self.units:
             if not isinstance(u, Unit):
                 raise TypeError("units must contain Unit instances")
+
+    def moodle_codes(self) -> dict:
+        """The <showunits> and <unitgradingtype> values Moodle stores for these options."""
+        if self.handling == "graded":
+            return {
+                "showunits": _SHOWUNITS_GRADED[self.input],
+                "unitgradingtype": _UNITGRADINGTYPE[self.penalty_of],
+            }
+        return {"showunits": _SHOWUNITS_UNGRADED[self.handling], "unitgradingtype": 0}
+
+    @staticmethod
+    def options_from_moodle_codes(showunits: int, unitgradingtype: int) -> dict:
+        """Inverse of moodle_codes(); the input and penalty_of only exist for graded units."""
+        if unitgradingtype == 0:
+            handling = {v: k for k, v in _SHOWUNITS_UNGRADED.items()}.get(showunits)
+            if handling is None:
+                raise ValueError(f"showunits must be 3 or 0 when units are not graded, got {showunits}")
+            return {"handling": handling}
+        input_ = {v: k for k, v in _SHOWUNITS_GRADED.items()}.get(showunits)
+        penalty_of = {v: k for k, v in _UNITGRADINGTYPE.items()}.get(unitgradingtype)
+        if input_ is None or penalty_of is None:
+            raise ValueError(f"Invalid showunits/unitgradingtype: {showunits}/{unitgradingtype}")
+        return {"handling": "graded", "input": input_, "penalty_of": penalty_of}

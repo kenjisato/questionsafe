@@ -14,6 +14,13 @@ instead of guessing. All links verified on 2026-08-19.
   the importer/exporter source code, and the de facto specification where the wiki is silent.
   Note that since Moodle 5.1 the code lives under `public/`; on older stable branches
   (e.g. `MOODLE_405_STABLE`) the path is `question/format/xml/format.php`.
+- Numerical unit options are not in the wiki page or the XML fixtures (checked 2026-11-14,
+  page last edited 2024-03-20): it only says `<unit>` has a name and a multiplier. For
+  `<units>`, `<showunits>`, `<unitgradingtype>`, `<unitpenalty>` and `<unitsleft>` read
+  `question/type/numerical/questiontype.php` (the `UNIT*` constants and
+  `save_unit_options()`; `<showunits>` is the unit role when units are not graded and the
+  input method when they are) and `edit_numerical_form.php` (the options and defaults).
+  Identical on `MOODLE_405_STABLE` and 5.2.
 - [XML test fixtures (moodle/moodle)](https://github.com/moodle/moodle/tree/main/public/question/format/xml/tests/fixtures) —
   real XML files used by Moodle's own PHPUnit tests (`multichoice.xml`, `truefalse.xml`,
   `multianswer.xml`, nested categories, and more). Useful as golden references for our writer output.

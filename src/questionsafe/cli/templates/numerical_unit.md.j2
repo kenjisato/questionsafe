@@ -5,17 +5,11 @@ answers:
   - answer: 3.14
     tolerance: 0.01
 units:
-  units:
-    - name: g
-      multiplier: 1.0
-      grade: 100
-    - name: kg
-      multiplier: 1000.0
-      grade: 50
-  showunits: 1
-  unitgradingtype: 2
-  unitpenalty: 0.2
-  unitsleft: false
+  - name: g          # base unit
+    multiplier: 1
+  - name: kg         # 1 g = 0.001 kg
+    multiplier: 0.001
+unit_handling: graded      # none | optional | graded
 ---
 
 Write your question here.

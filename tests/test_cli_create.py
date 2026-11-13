@@ -21,7 +21,7 @@ def read(p: Path) -> str:
         ("truefalse", ["type: truefalse", "choices:", "(x) True", "( ) False"]),
         ("shortanswer", ["type: shortanswer", "answers:", "Your answer"]),
         ("numerical", ["type: numerical", "answers:", "answer:", "tolerance:"]),
-        ("numerical_unit", ["type: numerical", "units:", "unitpenalty", "unitgradingtype"]),
+        ("numerical_unit", ["type: numerical", "units:", "unit_handling"]),
         ("essay", ["type: essay", "---\n\nWrite your question here."]),
         ("cloze", ["type: cloze", "cloze:", "{}", "{{gap1}}"]),
     ],

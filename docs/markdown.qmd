@@ -387,6 +387,14 @@ answers:
     tolerance: float
     fraction: float                # default 100
     feedback: str | {text, format}
+units:                             # optional; the base unit first
+  - name: str
+    multiplier: float              # default 1
+unit_handling: none|optional|graded   # default optional
+unit_penalty: float                # 0-1, default 0.1 (graded only)
+unit_penalty_of: response|question # default response (graded only)
+unit_input: text|radio|select      # default text (graded only)
+units_left: true|false             # default false
 hints:
   - str | {text, format}
 hint_penalty: float
@@ -404,7 +412,22 @@ Question stem
 Values and tolerances are read as decimals and rounded to 15 decimal places, so `0.9` in the
 file is the same number as `0.3 + 0.3 + 0.3` in Python.
 
-`units:` is not read from Markdown yet (#16); set units with the Python API.
+### Units
+
+Answers are given in the base unit, the first in `units:`. A value in another unit is the
+value in the base unit times its `multiplier`: with base `g`, `kg` has multiplier `0.001`.
+The defaults are Moodle's.
+
+| Key | Moodle's edit form | Values |
+|---|---|---|
+| `unit_handling` | Unit handling | `none`: not used; `optional`: a unit, if given, converts the response; `graded`: the unit must be given and is graded |
+| `unit_penalty` | Unit penalty | 0-1, deducted for a wrong unit |
+| `unit_penalty_of` | (penalty applied) | `response`: as a fraction of the response grade; `question`: of the question grade |
+| `unit_input` | Units are input using | `text`: a text box; `radio`: radio buttons; `select`: a drop-down menu |
+| `units_left` | Units go | `true`: on the left, as in $1.00 |
+
+In Moodle XML these become `<showunits>` and `<unitgradingtype>`, whose codes depend on each
+other; see `UnitSpec.moodle_codes` and [References](references.md).
 
 ## Cloze
 

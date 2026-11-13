@@ -136,7 +136,13 @@ def _fingerprints(xml: bytes) -> Counter:
                 )
                 for a in q.findall("answer")
             )
-            units = frozenset(_norm(u.findtext("unit_name")) for u in q.findall(".//units/unit"))
+            units = frozenset(
+                (_norm(u.findtext("unit_name")), round(float(u.findtext("multiplier")), 6))
+                for u in q.findall(".//units/unit")
+            ) | {
+                (k, round(float(q.findtext(k) or 0), 5))
+                for k in ("showunits", "unitgradingtype", "unitpenalty", "unitsleft")
+            }
             out[(qtype, name, qtext, answers, units)] += 1
         elif qtype in ("multichoice", "truefalse", "shortanswer"):
             answers = frozenset(
@@ -195,7 +201,13 @@ def _build_quiz(tmp_path: Path):
         Q.Numerical(name="rt-numerical")
         .set_questiontext("Speed after 2 s at 9.8 m/s^2?")
         .add_answer(19.6, 0.1)
-        .add_units(Unit("m/s", 1.0))
+        .add_units(Unit("m/s"), Unit("km/h", 3.6), handling="graded", input="select", penalty=0.3)
+    )
+    num_units = (
+        Q.Numerical(name="rt-numerical-units")
+        .set_questiontext("100 g + 1 kg?")
+        .add_answer_unit(1100, "g")
+        .add_answer_unit(1.1, "kg")
     )
     essay = (
         Q.Essay(name="rt-essay")
@@ -237,7 +249,7 @@ def _build_quiz(tmp_path: Path):
     )
     cloze = Reader(cloze_path).read()
 
-    for q in (mc, sc, tf, sa, num, essay, desc, cloze):
+    for q in (mc, sc, tf, sa, num, num_units, essay, desc, cloze):
         qz.add(q)
 
     meta = Reader(REPO_ROOT / "examples" / "markdown" / "metachoice.md").read_metachoice()

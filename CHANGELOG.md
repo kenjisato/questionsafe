@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Added
+- The Markdown reader reads numerical units (#16): `units:` as a list of
+  `{name, multiplier}` and the options `unit_handling`, `unit_penalty`, `unit_penalty_of`,
+  `unit_input`, `units_left`. Unknown keys are errors.
 - Local images in question text and choices (#3): `![alt](path)` and `<img src="path">`
   are embedded as Moodle files named by content hash; in choices the alt text becomes
   `Choice image` and the title is dropped. The Markdown reader resolves relative paths
@@ -60,6 +63,9 @@
   positive-fraction sum (1e-3 instead of 1e-6).
 
 ### Fixed
+- Unit multipliers in the docs, `examples/combined.py` and the `numerical_unit` templates
+  ran the wrong way (km/h as 0.2777778 of m/s; kg as 1000 of g). A value in a unit is the
+  base value times its multiplier: km/h is 3.6, kg is 0.001 (#16).
 - `ShortAnswer.validate()` and `Numerical.validate()` require an answer worth 100%, as
   Moodle's edit forms do (#17); without one, no response could get full marks.
 - Reader.read(validate=True) now actually validates every question type; previously all
@@ -118,6 +124,15 @@
   fractions rejected by `validate()`, violating the safe-API contract.
 
 ### Changed
+- Numerical unit options follow Moodle's edit form (#16): `UnitSpec` has `handling`
+  (`none`/`optional`/`graded`), `penalty` (any value 0-1), `penalty_of`
+  (`response`/`question`), `input` (`text`/`radio`/`select`) and `left`, replacing the
+  Moodle codes `showunits`, `unitgradingtype`, `unitpenalty`, `unitsleft`. The old
+  `showunits` was documented as "1 = required/graded", but with graded units Moodle reads
+  1 as "choose the unit with radio buttons", so units were shown as radio buttons by
+  default, and a drop-down could not be chosen. Defaults are now Moodle's: optional,
+  penalty 0.1 of the response grade, text input. `validate()` requires a unit when units
+  are used and the first unit's multiplier to be 1, as the edit form does.
 - Choice numbering defaults to `abc`, Moodle's default (#11); it was `none`. Questions
   that never set it now show a./b./c. in Moodle. Set `numbering: none` (or
   `set_numbering("none")`) to keep the old look.
@@ -152,8 +167,12 @@
 - `labels` (#11): `MultiChoice.labels`, `set_labels()` and `set_choice_layout(labels=...)`
   still work and emit a `DeprecationWarning`; `choice_layout: {labels: ...}` in Markdown
   emits a `FutureWarning`, which is shown by default. They will be removed in a later release.
+- `showunits`, `unitgradingtype`, `unitpenalty`, `unitsleft` keywords of `add_units()`,
+  `set_units()` and `set_unit_options()` (#16) still work, mean what they did, and emit a
+  `DeprecationWarning`.
 
 ### Removed
+- `Unit.fraction` (#16): Moodle's `<unit>` has no fraction, and the importer ignored it.
 - `randomize_branch` on `MetaChoice.generate_*` and `constrained_subsets`; the
   usage-balanced search replaces it. `randomize_order` now only breaks ties.
 - Legacy MultiChoice sugar methods: correct(), wrong(), choices(), choice(), as_multiple(), numbering(), shuffle(). Examples and tests now use the new API.

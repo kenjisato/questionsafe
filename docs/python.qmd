@@ -168,7 +168,8 @@ embed_example(Quiz([_]))
 Moodle grades by the first matching answer.
 
 Answers with units: `add_answer_unit` adds a value in a unit and infers the multiplier.
-Global unit options are set once per question.
+Unit options are set once per question; the defaults are Moodle's, and the
+[Units table](markdown.qmd#units) lists what they mean.
 
 ```{python}
 #| echo: true
@@ -177,8 +178,9 @@ Global unit options are set once per question.
     Q.Numerical("Weight")
      .ask("100g + 1kg = ?")
      .add_answer_unit(1100, "g")   # base unit and base answer
-     .add_answer_unit(1.1, "kg")   # infers the kg multiplier, 1000
-     # .set_unit_options(showunits=1, unitgradingtype=2, unitpenalty=0.2)  # the defaults
+     .add_answer_unit(1.1, "kg")   # infers the kg multiplier, 0.001
+     # .set_unit_options(handling="optional", penalty=0.1, penalty_of="response",
+     #                   input="text", left=False)  # the defaults
 )
 ```
 
@@ -199,9 +201,9 @@ from questionsafe import Unit
      .ask("Give speed in m/s; km/h allowed")
      .add_answer(3.14)
      .add_units(
-         Unit("m/s", 1.0, 100),
-         Unit("km/h", 0.2777778, 50),
-         showunits=1, unitgradingtype=2, unitpenalty=0.2, unitsleft=False,  # the defaults
+         Unit("m/s"),           # base unit
+         Unit("km/h", 3.6),     # 1 m/s = 3.6 km/h
+         handling="graded", input="select",
      )
 )
 ```

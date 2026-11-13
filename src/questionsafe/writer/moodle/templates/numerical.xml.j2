@@ -10,9 +10,6 @@
     <unit>
       <multiplier>{{ u.multiplier }}</multiplier>
       <unit_name>{{ u.unit | e }}</unit_name>
-      {%- if u.fraction is not none %}
-      <fraction>{{ u.fraction }}</fraction>
-      {%- endif %}
     </unit>
   {%- endfor %}
   </units>

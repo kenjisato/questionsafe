@@ -89,15 +89,11 @@ num2 = (
     )
     .add_answer(3.14, tolerance=0.005)
     .set_units(
-        Unit(unit_name="m/s", multiplier=1.0, fraction=100),
-        Unit(unit_name="km/h", multiplier=0.2777778, fraction=0),
-        showunits=1,
-        unitgradingtype=1,
-        unitpenalty=0.1,
-        unitsleft=False,
+        Unit("m/s"),  # base unit
+        Unit("km/h", 3.6),  # 1 m/s = 3.6 km/h
+        handling="graded",  # the unit must be given; a wrong one loses 0.1 of the response grade
     )
 )
-# Attach UnitSpec: primary unit m/s, alternative km/h with no credit, units required with fractional penalty
 quiz.add_group([num1, num2], idnumber_prefix="num-", idnumber_offset=100)
 
 # Essay variants
